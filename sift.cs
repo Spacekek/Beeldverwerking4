@@ -58,9 +58,11 @@ namespace INFOIBV
         // k', refined key point at octave p, scale lever q and spatial position x,y
 
         // returns a list of dominant orientations for the key point k'
-        private void GetDominantOrientations()
+        private void GetDominantOrientations(List<int> G, Keypoint k)
         {
-
+            histogram h = GetOrientationHistogram(G, k);
+            SmoothCircular(h, n);
+            List<int> A = FindPeakOrientations(h); //list of dominant orientations 
         }
 
         // MakeSiftDescriptor
@@ -74,5 +76,49 @@ namespace INFOIBV
         {
 
         }
+        
+        private void SmoothCircular(x, iter)
+        {
+
+            return;
+        }
+        private void FindPeakOrientations(float[] h)
+        {
+            int t = 500; //threshold
+            int n = h.Length;
+            float h_max = h.Max();
+            List<float> A = new List<float>();
+
+            for (int k = 0; k < n; k++)
+            {
+                float hc = h[k];
+                if (hc > t * h_max)
+                {
+                    float hp = h[k-1] % n;
+                    float hn = h[k+1] % n;
+                    if (hc > hp && hc > hn)
+                    {
+                        float k_new = k + (hp - hn) / (2 * (hp - (2 * hc) + hn));
+                        double theta = (k_new * 2 * Math.PI / n) % (2*Math.PI);
+                        A.Add((float)theta);
+                    }
+                }
+            }
+
+        }
+        private void GetOrientationHistogram(List<int> G, Keypoint k)
+        {
+            Gpq = GetScaleLevel(G, k.p, k.q);
+            int M, N = size(Gpc);
+
+        }
+    }
+
+    class Keypoint
+    {
+        public int p; //octave
+        public int q; //scale level
+        public int x; //spatial positon (x,y) (in octave's coördinates)
+        public int y;
     }
 }
