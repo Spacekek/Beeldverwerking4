@@ -32,6 +32,7 @@ namespace INFOIBV
             MedianFilter,
             DetectEdges,
             HistogramEqualization,
+            createSIFTscaleSpace
 
         }
 
@@ -147,6 +148,9 @@ namespace INFOIBV
                     return workingImage;
                 case ProcessingFunctions.HistogramEqualization:
                     return histogramEqualization(workingImage);
+                case ProcessingFunctions.createSIFTscaleSpace:
+                    BuildSiftScaleSpace(workingImage, (float)0.5, (float)1.6, 4, 3);
+                    return workingImage;
                 default:
                     return null;
             }
@@ -526,6 +530,126 @@ namespace INFOIBV
             trackBar3 = sender as TrackBar;
             filterSize = oneven_waardes[trackBar3.Value];
             label3.Text = "Filter size is: " + oneven_waardes[trackBar3.Value];
+        }
+
+        ////
+        /// ASSIGMNENT 4
+        ///
+
+        //
+        private (byte[][][,], int[][][,]) BuildSiftScaleSpace(byte[,] InputImage, float sigmaS, float σ0, float P, float Q)
+        {
+            double initial_sigma = σ0 * Math.Pow(2, (-1.0 / Q));
+            float initial_increment_sigma = (float)Math.Sqrt((initial_sigma * initial_sigma) - (sigmaS * sigmaS));
+
+            //filter size moet vgm mee groeien. miss kijken of int kunnen maken 
+            byte filtersize = (byte)(6 * initial_increment_sigma + 1);
+            if (filtersize % 2 == 0) { filtersize += 1; } //zorgt dat filtersize altijd oneven is
+
+            float[,] gausianFilter = createGaussianFilter(filtersize, initial_increment_sigma);  //maakt the gaussian filter
+
+            byte[,] gausianFilteredImage = convolveImage(InputImage, gausianFilter); //past gaussian filter toe op Inputimage
+
+            byte[][,] firstOctave = new byte[(int)Q][,];
+            firstOctave = MakeGaussianOctave(gausianFilteredImage, Q, σ0); //maakt eerste octave van Q lang die gaussianfilter toepast op image met verschillende a 
+
+
+            byte[][][,] octaves = new byte[(int)P][][,];
+            octaves[0] = firstOctave;
+
+
+
+            for (int p = 1; p < P; p++)
+            {
+                octaves[p] = MakeGaussianOctave(Decimate(octaves[p - 1][(int)Q - 1]), Q, σ0);
+            }
+
+            int[][][,] DOGoctaves = new int[(int)P][][,];
+
+            for (int j = 0; j < P; j++)
+            {
+                DOGoctaves[j] = MakeDogOctave(octaves[j]);
+            }
+
+            return (octaves, DOGoctaves);
+        }
+
+        private byte[][,] MakeGaussianOctave(byte[,] gaussianFilteredImage, float Q, float σ0)
+        {
+            byte[][,] octave = new byte[(int)Q][,];
+            float[,] gausianFilter;
+
+            for (float i = 0; i < Q; i++)
+            {
+                float sd = (float)(σ0 * Math.Sqrt(Math.Pow(2.0, (2.0 * i / Q)) - 1));
+
+                byte filtersize = (byte)(6 * sd + 1); //past filter size aan opbasis van sd
+                if (filtersize % 2 == 0) { filtersize += 1; } //zorgt dat filtersize altijd oneven is
+                if (sd == 0) { octave[(int)i] = gaussianFilteredImage; }
+                else
+                {
+                    gausianFilter = createGaussianFilter(filtersize, sd);
+                    octave[(int)i] = convolveImage(gaussianFilteredImage, gausianFilter);
+                }
+
+
+
+            }
+            return octave;
+
+        }
+
+        private int[][,] MakeDogOctave(byte[][,] octave)
+        {
+            byte[,] firstGaussian;
+            byte[,] secondGaussian;
+
+            int[][,] DOGoctave = new int[octave.GetLength(0) - 1][,];
+
+            for (int i = 0; i < octave.Length - 1; i++)
+            {
+                firstGaussian = octave[i];
+                secondGaussian = octave[i + 1];
+                int[,] diffrenceGaussian = new int[firstGaussian.GetLength(0), firstGaussian.GetLength(1)];
+
+                for (int x = 0; x < firstGaussian.GetLength(0); x++)
+                {
+                    for (int y = 0; y < firstGaussian.GetLength(1); y++)
+                    {
+                        diffrenceGaussian[x, y] = secondGaussian[x, y] - firstGaussian[x, y];
+
+                    }
+
+                }
+
+                DOGoctave[i] = diffrenceGaussian;
+
+            }
+
+            return DOGoctave;
+
+        }
+
+        private byte[,] Decimate(byte[,] Image)
+        {
+            int breedte = Image.GetLength(0);
+            int hoogte = Image.GetLength(1);
+
+
+            breedte = breedte / 2;
+            hoogte = hoogte / 2; //int floort
+
+            byte[,] adjImage = new byte[breedte, hoogte];
+
+            for (int i = 0; i < breedte; i++)
+            {
+                for (int j = 0; j < hoogte; j++)
+                {
+                    adjImage[i, j] = Image[2 * i, 2 * j];
+                }
+            }
+
+            return adjImage;
         }
     }
 }
