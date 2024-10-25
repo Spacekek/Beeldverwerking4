@@ -1,0 +1,10 @@
+C:\Users\kek\Desktop\Beeldverwerking4\bin\Release\INFOIBV.exe.config
+C:\Users\kek\Desktop\Beeldverwerking4\bin\Release\INFOIBV.exe
+C:\Users\kek\Desktop\Beeldverwerking4\bin\Release\INFOIBV.pdb
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.csproj.AssemblyReference.cache
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.INFOIBV.resources
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.Properties.Resources.resources
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.csproj.GenerateResource.cache
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.csproj.CoreCompileInputs.cache
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.exe
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.pdb
