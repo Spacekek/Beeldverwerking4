@@ -31,8 +31,8 @@ namespace INFOIBV
             MedianFilter,
             DetectEdges,
             HistogramEqualization,
-            createSIFTscaleSpace
-
+            createSIFTscaleSpace,
+            GetSiftFeatures
         }
 
         /*
@@ -150,6 +150,10 @@ namespace INFOIBV
                 case ProcessingFunctions.createSIFTscaleSpace:
                     Sift sifter = new Sift();
                     (byte[][][,] G, int[][][,] D) = sifter.BuildSiftScaleSpace(workingImage, (float)0.5, (float)1.6, 4, 3);
+                    return workingImage;
+                case ProcessingFunctions.GetSiftFeatures:
+                    Sift sifter2 = new Sift();
+                    sifter2.GetSiftFeatures(workingImage);
                     return workingImage;
                 default:
                     return null;

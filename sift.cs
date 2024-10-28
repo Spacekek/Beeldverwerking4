@@ -243,6 +243,10 @@ namespace INFOIBV
         {
             return D[p][q];
         }
+        private byte[,] GetScaleLevel(byte[][][,] G, int p, int q)
+        {
+            return G[p][q];
+        }
 
         // GetNeighborhood
         // input:
@@ -325,10 +329,10 @@ namespace INFOIBV
                     Matrix<double> Dpeak = N[1, 1, 1] + 0.5 * delta.Transpose() * d;
                     // take top left 2x2 submatrix of H
                     Matrix<double> Hxy = H.SubMatrix(0, 2, 0, 2);
-                    //if (Dpeak.Magnitude() > t_Peak && Hxy.Determinant() > 0)
-                    //{
-                    //    k2 = k + new Keypoint(0, 0, (int)Math.Round(d[0, 0]), (int)Math.Round(d[1, 0]));
-                    //}
+                    if (Math.Abs(Dpeak[0,0]) > t_Peak && Hxy.Determinant() > 0) // ASSUMES 1x1 Dpeak MATRIX MIGHT BE WRONG
+                    {
+                        k2 = k + new Keypoint(0, 0, (int)Math.Round(d[0, 0]), (int)Math.Round(d[1, 0]));
+                    }
                     return k2;
                 }
                 // move to a neighboring DoG position at same level p, q:
@@ -455,13 +459,14 @@ namespace INFOIBV
 
         private void GetOrientationHistogram(double[,,] G, Keypoint k)
         {
-            double[,] Gpq = GetScaleLevel(G, k.p, k.q);
-            int row = Gpq.GetLength(0);
-            int col = Gpq.GetLength(1);
-            Dictionary<int, double> h = new Dictionary<int, double>();
-            for (int i = 0; i < row; i++)
-            {
-            }
+            //double[,] Gpq = GetScaleLevel(G, k.p, k.q);
+            //int row = Gpq.GetLength(0);
+            //int col = Gpq.GetLength(1);
+            //Dictionary<int, double> h = new Dictionary<int, double>();
+            //for (int i = 0; i < row; i++)
+            //{
+            //}
+        }
 
         private Tuple<double, double> GetGradientPolar(int[,] Gpq, int u, int v)
         {
