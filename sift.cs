@@ -37,17 +37,17 @@ namespace INFOIBV
         public void GetSiftFeatures(byte[,] image)
         {
             (byte[][][,] G, int[][][,] D) = BuildSiftScaleSpace(image, sigma_s, sigma_0, P, Q);
-            // C = GetKeyPoints(D)
-            // S = new list sift descriptors
-            //foreach(k in C)
-            //{
-            //    orientations = GetDominantOrientations();
-            //    foreach(theta in orientations)
-            //    {
-            //        s = MakeSiftDescriptor();
-            //        S.add(s);
-            //    }
-            //}
+            List<Keypoint> C = GetKeyPoints(D);
+            List<byte[]> S = new List<byte[]>();
+            foreach(Keypoint k in C)
+            {
+               //List<float> orientations = GetDominantOrientations(G, k);
+               // foreach (float theta in orientations)
+               //{
+                   //byte[] s = MakeSiftDescriptor(G, k, theta);
+                   //S.Add(s);
+               //}
+            }
             //return S;
         }
 
@@ -189,13 +189,13 @@ namespace INFOIBV
             {
                for(int q = 0; q < D[p].GetLength(0); q++)
                {
-                 //List<Keypoint> E = FindExtrema(D, p, q);
-                 //foreach(Keypoint k in E)
-                 //    {
-                 //        Keypoint k1 = RefineKeyPosition(D,k);
-                 //        if (k1 != null)
-                 //            { C.Add(k1); }
-                 //    }
+                 List<Keypoint> E = FindExtrema(D, p, q);
+                 foreach(Keypoint k in E)
+                    {
+                        Keypoint k1 = RefineKeyPosition(D,k);
+                        if (k1 != null)
+                            { C.Add(k1); }
+                    }
                }
             }
             return C;
@@ -208,27 +208,28 @@ namespace INFOIBV
         // q: step
 
         // returns list of extrema
-        private void FindExtrema()
+        private List<Keypoint> FindExtrema(int[][][,] D, int p, int q)
         {
-            // d = GetScaleLevel(D, p, q);
-            //int M, N = d.size;
-            //List<Keypoint> E = new List<Keypoint>(); // empty list of extrema
-            //for (int u = 0; u < M-1; u++)
-            //{
-            //    for (int v = 0; v < N-1; v++)
-            //    {
-            //        if (d.length() > tmag)
-            //        {
-            //            k = (p, q, u, v);
-            //            N = GetNeighborhood(D, k);
-            //            if (IsExtremum(N))
-            //            {
-            //                E.Add(k);
-            //            }
-            //        }
-            //    }
-            //}
-            //return E;
+            int[,] d = GetScaleLevel(D, p, q);
+            int M = d.GetLength(0);
+            int N = d.GetLength(1);
+            List<Keypoint> E = new List<Keypoint>(); // empty list of extrema
+            for (int u = 0; u < M - 1; u++)
+            {
+                for (int v = 0; v < N - 1; v++)
+                {
+                    if (Math.Abs(d[u,v]) < t_Mag)
+                    {
+                        Keypoint k = new Keypoint(p, q, u, v);
+                        int[,,] neighborhood = GetNeighborhood(D, k);
+                        if (IsExtremum(neighborhood))
+                        {
+                            E.Add(k);
+                        }
+                    }
+                }
+            }
+            return E;
         }
 
         // GetScaleLevel(D, p, q)
@@ -238,10 +239,10 @@ namespace INFOIBV
         // q: step
 
         // returns the specified scale level
-        //private void GetScaleLevel(DoG D, int p, int q)
-        //{
-        //    //return D[p, q];
-        //}
+        private int[,] GetScaleLevel(int[][][,] D, int p, int q)
+        {
+            return D[p][q];
+        }
 
         // GetNeighborhood
         // input:
@@ -249,32 +250,32 @@ namespace INFOIBV
         // k: keypoint
 
         // returns 3x3x3 neighborhood values around position k in D
-        //private byte[,,] GetNeighborhood(DoG D, Keypoint k)
-        //{
-        //    byte[,,] N = new byte[3, 3, 3];
-        //    for (int u = -1; u > 1; u++)
-        //    {
-        //        for (int v = -1; v > 1; v++)
-        //        {
-        //            for (int w  = -1; w > 1; w++)
-        //            {
-        //                N[u + 1, v + 1, w + 1] = D[k.p, k.q + w](k.x + u, k.y + v);
-        //            }
-        //        }
-        //    }
-        //    return N;
-        //}
+        private int[,,] GetNeighborhood(int[][][,] D, Keypoint k)
+        {
+            int[,,] N = new int[3, 3, 3];
+            for (int u = -1; u > 1; u++)
+            {
+                for (int v = -1; v > 1; v++)
+                {
+                    for (int w = -1; w > 1; w++)
+                    {
+                        N[u + 1, v + 1, w + 1] = D[k.p][k.q + w][k.x + u, k.y + v];
+                    }
+                }
+            }
+            return N;
+        }
 
         // IsExtremum(N)
         // input:
         // N, neighborhood
 
         // returns whether N is local minimum or maximum by the threshold tExtrm >=0
-        private bool IsExtremum(byte[,,] N)
+        private bool IsExtremum(int[,,] N)
         {
-            byte center = N[1, 1, 1];
-            byte minimum = 255;
-            byte maximum = 0;
+            int center = N[1, 1, 1];
+            int minimum = 255;
+            int maximum = 0;
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 3; j++)
@@ -301,43 +302,43 @@ namespace INFOIBV
         // k, candidate position
 
         // returns a refined key point k'or null if no key point could be localized at or near k
-        //private Keypoint RefineKeyPosition(DoG D, Keypoint k)
-        //{
-        //    double alphamax = ((rho + 1)^2)/rho;
-        //    Keypoint k2 = null;
-        //    int n = 1;
-        //    bool done = false;
-        //    while (!done && n <= nrefine && IsInside(D, k))
-        //    {
-        //        byte[,,] N = GetNeighborhood(D, k);
-        //        Matrix<double> delta = Gradient(N);
-        //        Matrix<double> H = Hessian(N);
-        //        if (H.Determinant() == 0)
-        //        {
-        //            done = true;
-        //            return null;
-        //        }
-        //        Matrix<double> d = -H.Inverse()*delta;
-        //        if (d[0,0].Magnitude() < 0.5 && d[1,0].Magnitude() < 0.5)
-        //        {
-        //            done = true;
-        //            Matrix<double> Dpeak = N[1,1,1] + 0.5 * delta * d;
-        //            // take top left 2x2 submatrix of H
-        //            Matrix<double> Hxy = H.SubMatrix(0, 2, 0, 2);
-        //            if (Dpeak.Magnitude() > tPeak && Hxy.Determinant() > 0)
-        //            {
-        //                k2= k + new Keypoint(0, 0, d[0,0], d[1,0]);
-        //            }
-        //            return k2;
-        //        }
-        //        // move to a neighboring DoG position at same level p, q:
-        //        int u = (int)Math.Min(1, Math.Max(-1, Math.Round(d[0, 0])));
-        //        int v = (int)Math.Min(1, Math.Max(-1, Math.Round(d[1, 0])));
-        //        k = k + new Keypoint(0, 0, u, v);
-        //        n = n + 1;
-        //    }
-        //    return null;
-        //}
+        private Keypoint RefineKeyPosition(int[][][,] D, Keypoint k)
+        {
+            double alphamax = Math.Pow(reMax + 1, 2) / reMax;
+            Keypoint k2 = null;
+            int n = 1;
+            bool done = false;
+            while (!done && n <= n_Refine && IsInside(D, k))
+            {
+                int[,,] N = GetNeighborhood(D, k);
+                Matrix<double> delta = Gradient(N);
+                Matrix<double> H = Hessian(N);
+                if (H.Determinant() == 0)
+                {
+                    done = true;
+                    return null;
+                }
+                Matrix<double> d = -H.Inverse() * delta;
+                if (d[0, 0].Magnitude() < 0.5 && d[1, 0].Magnitude() < 0.5)
+                {
+                    done = true;
+                    Matrix<double> Dpeak = N[1, 1, 1] + 0.5 * delta.Transpose() * d;
+                    // take top left 2x2 submatrix of H
+                    Matrix<double> Hxy = H.SubMatrix(0, 2, 0, 2);
+                    //if (Dpeak.Magnitude() > t_Peak && Hxy.Determinant() > 0)
+                    //{
+                    //    k2 = k + new Keypoint(0, 0, (int)Math.Round(d[0, 0]), (int)Math.Round(d[1, 0]));
+                    //}
+                    return k2;
+                }
+                // move to a neighboring DoG position at same level p, q:
+                int u = (int)Math.Min(1, Math.Max(-1, Math.Round(d[0, 0])));
+                int v = (int)Math.Min(1, Math.Max(-1, Math.Round(d[1, 0])));
+                k = k + new Keypoint(0, 0, u, v);
+                n = n + 1;
+            }
+            return null;
+        }
 
         // IsInside(D, k)
         // input:
@@ -345,19 +346,19 @@ namespace INFOIBV
         // k, keypoint
 
         // returns whether k is inside D
-        //private bool IsInside(DoG D, Keypoint k)
-        //{
-        //    p, q, u, v = k;
-        //    M, N = GetScaleLevel(D, p, q).size;
-        //    return (0 < u < M-1) && (0 < v < N-1) && (0 <= q < Q);
-        //}
+        private bool IsInside(int[][][,] D, Keypoint k)
+        {
+            (int p, int q, int u, int v) = (k.p, k.q, k.x, k.y);
+            (int M, int N) = (GetScaleLevel(D, p, q).GetLength(0), GetScaleLevel(D, p, q).GetLength(1));
+            return (0 < u && u < M - 1) && (0 < v && v < N - 1) && (0 <= q && q < Q);
+        }
 
         // Gradient(N)
         // input:
         // N, neighborhood
 
         // returns the estimated gradient of N
-        private Matrix<double> Gradient(byte[,,] N)
+        private Matrix<double> Gradient(int[,,] N)
         {
            double[,] deltaarray = { { 0.5 * (N[1, 0, 0] - N[-1, 0, 0]), 0.5 * (N[0, 1, 0] - N[0, -1, 0]), 0.5 * (N[0, 0, 1] - N[0, 0, -1]) } };
            Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray);
@@ -369,7 +370,7 @@ namespace INFOIBV
         // N, neighborhood
 
         // returns the estimated Hessian matrix of N
-        private Matrix<double> Hessian(byte[,,] N)
+        private Matrix<double> Hessian(int[,,] N)
         {
             double dxx = N[-1,0,0] - 2*N[0,0,0] + N[1,0,0];
             double dyy = N[0,-1,0] - 2*N[0,0,0] + N[0,1,0];
@@ -452,16 +453,16 @@ namespace INFOIBV
 
             return A;
         }
-       
+
         private void GetOrientationHistogram(double[,,] G, Keypoint k)
         {
-            double [,] Gpq = GetScaleLevel(G, k.p, k.q);
+            double[,] Gpq = GetScaleLevel(G, k.p, k.q);
             int row = Gpq.GetLength(0);
             int col = Gpq.GetLength(1);
             Dictionary<int, double> h = new Dictionary<int, double>();
-            for (int i = 0; i < row; i++) 
+            for (int i = 0; i < row; i++)
             {
-        }
+            }
 
         private
     }
@@ -471,7 +472,44 @@ namespace INFOIBV
     {
         public int p; //octave
         public int q; //scale level
-        public int x; //spatial positon (x,y) (in octave's coördinates)
+        public int x; //spatial positon (x,y) (in octave's coördinates) 
         public int y;
+
+        public int P
+        {
+            get { return p; }
+            set { p = value; }
+        }
+
+        public int Q 
+        {
+            get { return q; }
+            set { q = value; }
+        }
+
+        public int X
+        {
+            get { return x; }
+            set { x = value; }
+        }
+
+        public int Y
+        {
+            get { return y; }
+            set { y = value; }
+        }
+
+        public Keypoint(int p, int q, int x, int y)
+        {
+            this.p = p;
+            this.q = q;
+            this.x = x;
+            this.y = y;
+        }
+
+        public static Keypoint operator +(Keypoint a, Keypoint b)
+        {
+            return new Keypoint(a.p + b.p, a.q + b.q, a.x + b.x, a.y + b.y);
+        }
     }
 }
