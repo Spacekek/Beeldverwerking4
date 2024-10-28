@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Deployment.Application;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace INFOIBV
 {
     internal class Sift
     {
         byte tExtrm = 1;
+        double rho = 0.1;
         // GetSiftFeatures takes as input a greyscale image and returns the image
         public void GetSiftFeatures(byte[,] image)
         {
@@ -104,10 +108,10 @@ namespace INFOIBV
         // q: step
 
         // returns the specified scale level
-        private void GetScaleLevel()
-        {
-            //return D[p, q];
-        }
+        //private void GetScaleLevel(DoG D, int p, int q)
+        //{
+        //    //return D[p, q];
+        //}
 
         // GetNeighborhood
         // input:
@@ -169,37 +173,37 @@ namespace INFOIBV
         // returns a refined key point k'or null if no key point could be localized at or near k
         //private Keypoint RefineKeyPosition(DoG D, Keypoint k)
         //{
-        //    alphamax = ((rho + 1)^2)/rho;
-        //    Keypoint k' = null;
+        //    double alphamax = ((rho + 1)^2)/rho;
+        //    Keypoint k2 = null;
         //    int n = 1;
         //    bool done = false;
         //    while (!done && n <= nrefine && IsInside(D, k))
         //    {
         //        byte[,,] N = GetNeighborhood(D, k);
-        //        delta = Gradient(N);
-        //        H = Hessian(N);
-        //        if (Determinant(H) == 0)
+        //        Matrix<double> delta = Gradient(N);
+        //        Matrix<double> H = Hessian(N);
+        //        if (H.Determinant() == 0)
         //        {
         //            done = true;
         //            return null;
         //        }
-        //        d = -Inverse(H)*delta;
-        //        if (Length(d.X) < 0.5 && Length(d.Y) < 0.5)
+        //        Matrix<double> d = -H.Inverse()*delta;
+        //        if (d[0,0].Magnitude() < 0.5 && d[1,0].Magnitude() < 0.5)
         //        {
         //            done = true;
-        //            Dpeak = N[1,1,1] + 0.5 * Transpose(delta) * d;
+        //            Matrix<double> Dpeak = N[1,1,1] + 0.5 * delta * d;
         //            // take top left 2x2 submatrix of H
-        //            Hxy = H[0:2, 0:2];
-        //            if (Length(Dpeak) > tPeak && Determinant(Hxy) > 0)
+        //            Matrix<double> Hxy = H.SubMatrix(0, 2, 0, 2);
+        //            if (Dpeak.Magnitude() > tPeak && Hxy.Determinant() > 0)
         //            {
-        //                k'= k + (0, 0, d.X, d.Y);
+        //                k2= k + new Keypoint(0, 0, d[0,0], d[1,0]);
         //            }
-        //            return k';
+        //            return k2;
         //        }
         //        // move to a neighboring DoG position at same level p, q:
-        //        u' = min(1, max(-1, round(d.X)))
-        //        v' = min(1, max(-1, round(d.Y)))
-        //        k = k + (0, 0, u', v');
+        //        int u = (int)Math.Min(1, Math.Max(-1, Math.Round(d[0, 0])));
+        //        int v = (int)Math.Min(1, Math.Max(-1, Math.Round(d[1, 0])));
+        //        k = k + new Keypoint(0, 0, u, v);
         //        n = n + 1;
         //    }
         //    return null;
@@ -223,28 +227,30 @@ namespace INFOIBV
         // N, neighborhood
 
         // returns the estimated gradient of N
-        //private Matrix Gradient(byte[,] N)
-        //{
-        //    Matrix delta = 0.5 * (N[1,0,0] - N[-1,0,0], N[0,1,0] - N[0,-1,0], N[0,0,1] - N[0,0,-1]);
-        //    return delta;
-        //}
+        private Matrix<double> Gradient(byte[,,] N)
+        {
+           double[,] deltaarray = { { 0.5 * (N[1, 0, 0] - N[-1, 0, 0]), 0.5 * (N[0, 1, 0] - N[0, -1, 0]), 0.5 * (N[0, 0, 1] - N[0, 0, -1]) } };
+           Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray);
+           return delta;
+        }
 
         // Hessian(N)
         // input:
         // N, neighborhood
 
-        // returns the estimated Hessian matrixof N
-        //private Matrix Hessian(byte[,] N)
-        //{
-        //    float dxx = N[-1,0,0] - 2*N[0,0,0] + N[1,0,0];
-        //    float dyy = N[0,-1,0] - 2*N[0,0,0] + N[0,1,0];
-        //    float dss = N[0,0,-1] - 2*N[0,0,0] + N[0,0,1];
-        //    float dxy = 0.25 * (N[1,1,0] - N[-1,1,0] - N[1,-1,0] + N[-1,-1,0]);
-        //    float dxs = 0.25 * (N[1,0,1] - N[-1,0,1] - N[1,0,-1] + N[-1,0,-1]);
-        //    float dys = 0.25 * (N[0,1,1] - N[0,-1,1] - N[0,1,-1] + N[0,-1,-1]);
-        //    Matrix H = (dxx, dxy, dxs, dxy, dyy, dys, dxs, dys, dss);
-        //    return H;
-        //}
+        // returns the estimated Hessian matrix of N
+        private Matrix<double> Hessian(byte[,,] N)
+        {
+            double dxx = N[-1,0,0] - 2*N[0,0,0] + N[1,0,0];
+            double dyy = N[0,-1,0] - 2*N[0,0,0] + N[0,1,0];
+            double dss = N[0,0,-1] - 2*N[0,0,0] + N[0,0,1];
+            double dxy = 0.25 * (N[1,1,0] - N[-1,1,0] - N[1,-1,0] + N[-1,-1,0]);
+            double dxs = 0.25 * (N[1,0,1] - N[-1,0,1] - N[1,0,-1] + N[-1,0,-1]);
+            double dys = 0.25 * (N[0,1,1] - N[0,-1,1] - N[0,1,-1] + N[0,-1,-1]);
+            double[,] Harray = { {dxx, dxy, dxs}, {dxy, dyy, dys}, {dxs, dys, dss} };
+            Matrix<double> H = Matrix<double>.Build.DenseOfArray(Harray);
+            return H;
+        }
 
         // GetDominantOrientations
         // input:
@@ -252,12 +258,12 @@ namespace INFOIBV
         // k', refined key point at octave p, scale lever q and spatial position x,y
 
         // returns a list of dominant orientations for the key point k'
-        private void GetDominantOrientations(List<int> G, Keypoint k)
-        {
-            histogram h = GetOrientationHistogram(G, k);
-            SmoothCircular(h, n);
-            List<int> A = FindPeakOrientations(h); //list of dominant orientations 
-        }
+        //private void GetDominantOrientations(List<int> G, Keypoint k)
+        //{
+        //    histogram h = GetOrientationHistogram(G, k);
+        //    SmoothCircular(h, n);
+        //    List<int> A = FindPeakOrientations(h); //list of dominant orientations 
+        //}
 
         // MakeSiftDescriptor
         // input:
@@ -271,9 +277,8 @@ namespace INFOIBV
 
         }
         
-        private void SmoothCircular(x, iter)
+        private void SmoothCircular(Vector<double> x, int iter)
         {
-
             return;
         }
         private void FindPeakOrientations(float[] h)
@@ -300,12 +305,11 @@ namespace INFOIBV
             }
 
         }
-        private void GetOrientationHistogram(List<int> G, Keypoint k)
-        {
-            Gpq = GetScaleLevel(G, k.p, k.q);
-            int M, N = size(Gpc);
-
-        }
+        //private void GetOrientationHistogram(List<int> G, Keypoint k)
+        //{
+        //    Gpq = GetScaleLevel(G, k.p, k.q);
+        //    int M, N = size(Gpc);
+        //}
     }
 
     class Keypoint
