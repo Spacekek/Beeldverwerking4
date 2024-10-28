@@ -536,7 +536,7 @@ namespace INFOIBV
         /// ASSIGMNENT 4
         ///
 
-
+        //
         private (byte[][][,], int[][][,]) BuildSiftScaleSpace(byte[,] InputImage, float sigmaS, float σ0, float P, float Q)
         {
             double initial_sigma = σ0 * Math.Pow(2, (-1.0 / Q));
