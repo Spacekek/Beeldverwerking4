@@ -277,11 +277,27 @@ namespace INFOIBV
 
         }
         
-        private void SmoothCircular(Vector<double> x, int iter)
+        private void SmoothCircular(List<double> x, int iter)
         {
+            double[] h = { 0.25, 0.5, 0.25 };
+            int n = x.Count;
+            for (int i = 1; i == iter; i++)
+            {
+                double s = x[0];
+                double p = x[n-1];
+                
+                for(int j = 0; j == n-2; j++)
+                {
+                    double c = x[j];
+                    x[j] = (h[0] * p + h[1] * c + h[2] * x[j+1]);
+                    p = c;
+                }
+                x[n - 1] = h[0] * p + h[1]*x[n-1] + h[2]*s;
+            }
+
             return;
         }
-        private void FindPeakOrientations(float[] h)
+        private List<float> FindPeakOrientations(float[] h)
         {
             int t = 500; //threshold
             int n = h.Length;
@@ -304,13 +320,22 @@ namespace INFOIBV
                 }
             }
 
+            return A;
         }
-        //private void GetOrientationHistogram(List<int> G, Keypoint k)
-        //{
-        //    Gpq = GetScaleLevel(G, k.p, k.q);
-        //    int M, N = size(Gpc);
-        //}
+       
+        private void GetOrientationHistogram(double[,,] G, Keypoint k)
+        {
+            double [,] Gpq = GetScaleLevel(G, k.p, k.q);
+            int row = Gpq.GetLength(0);
+            int col = Gpq.GetLength(1);
+            Dictionary<int, double> h = new Dictionary<int, double>();
+            for (int i = 0; i < row; i++) 
+            {
+        }
+
+        private
     }
+
 
     class Keypoint
     {
