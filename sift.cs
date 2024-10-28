@@ -32,7 +32,7 @@ namespace INFOIBV
         double t_Fclip = 0.2;
         // Feature matching
         double rmMax = 0.8;
-        
+
         // GetSiftFeatures takes as input a greyscale image and returns the image
         public void GetSiftFeatures(byte[,] image)
         {
@@ -180,23 +180,23 @@ namespace INFOIBV
         // GetKeyPoints
         // input:
         // D: DoG scale space with P octaves containing Q levels
-        
+
         // returns a set of keypoints located in D
         private List<Keypoint> GetKeyPoints(int[][][,] D)
         {
             List<Keypoint> C = new List<Keypoint>();
-            for(int p = 0; p < D.GetLength(0); p++)
+            for (int p = 0; p < D.GetLength(0); p++)
             {
-               for(int q = 0; q < D[p].GetLength(0); q++)
-               {
-                 //List<Keypoint> E = FindExtrema(D, p, q);
-                 //foreach(Keypoint k in E)
-                 //    {
-                 //        Keypoint k1 = RefineKeyPosition(D,k);
-                 //        if (k1 != null)
-                 //            { C.Add(k1); }
-                 //    }
-               }
+                for (int q = 0; q < D[p].GetLength(0); q++)
+                {
+                    //List<Keypoint> E = FindExtrema(D, p, q);
+                    //foreach(Keypoint k in E)
+                    //    {
+                    //        Keypoint k1 = RefineKeyPosition(D,k);
+                    //        if (k1 != null)
+                    //            { C.Add(k1); }
+                    //    }
+                }
             }
             return C;
         }
@@ -359,9 +359,9 @@ namespace INFOIBV
         // returns the estimated gradient of N
         private Matrix<double> Gradient(byte[,,] N)
         {
-           double[,] deltaarray = { { 0.5 * (N[1, 0, 0] - N[-1, 0, 0]), 0.5 * (N[0, 1, 0] - N[0, -1, 0]), 0.5 * (N[0, 0, 1] - N[0, 0, -1]) } };
-           Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray);
-           return delta;
+            double[,] deltaarray = { { 0.5 * (N[1, 0, 0] - N[-1, 0, 0]), 0.5 * (N[0, 1, 0] - N[0, -1, 0]), 0.5 * (N[0, 0, 1] - N[0, 0, -1]) } };
+            Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray);
+            return delta;
         }
 
         // Hessian(N)
@@ -371,13 +371,13 @@ namespace INFOIBV
         // returns the estimated Hessian matrix of N
         private Matrix<double> Hessian(byte[,,] N)
         {
-            double dxx = N[-1,0,0] - 2*N[0,0,0] + N[1,0,0];
-            double dyy = N[0,-1,0] - 2*N[0,0,0] + N[0,1,0];
-            double dss = N[0,0,-1] - 2*N[0,0,0] + N[0,0,1];
-            double dxy = 0.25 * (N[1,1,0] - N[-1,1,0] - N[1,-1,0] + N[-1,-1,0]);
-            double dxs = 0.25 * (N[1,0,1] - N[-1,0,1] - N[1,0,-1] + N[-1,0,-1]);
-            double dys = 0.25 * (N[0,1,1] - N[0,-1,1] - N[0,1,-1] + N[0,-1,-1]);
-            double[,] Harray = { {dxx, dxy, dxs}, {dxy, dyy, dys}, {dxs, dys, dss} };
+            double dxx = N[-1, 0, 0] - 2 * N[0, 0, 0] + N[1, 0, 0];
+            double dyy = N[0, -1, 0] - 2 * N[0, 0, 0] + N[0, 1, 0];
+            double dss = N[0, 0, -1] - 2 * N[0, 0, 0] + N[0, 0, 1];
+            double dxy = 0.25 * (N[1, 1, 0] - N[-1, 1, 0] - N[1, -1, 0] + N[-1, -1, 0]);
+            double dxs = 0.25 * (N[1, 0, 1] - N[-1, 0, 1] - N[1, 0, -1] + N[-1, 0, -1]);
+            double dys = 0.25 * (N[0, 1, 1] - N[0, -1, 1] - N[0, 1, -1] + N[0, -1, -1]);
+            double[,] Harray = { { dxx, dxy, dxs }, { dxy, dyy, dys }, { dxs, dys, dss } };
             Matrix<double> H = Matrix<double>.Build.DenseOfArray(Harray);
             return H;
         }
@@ -406,7 +406,7 @@ namespace INFOIBV
         {
 
         }
-        
+
         private void SmoothCircular(List<double> x, int iter)
         {
             double[] h = { 0.25, 0.5, 0.25 };
@@ -414,22 +414,21 @@ namespace INFOIBV
             for (int i = 1; i == iter; i++)
             {
                 double s = x[0];
-                double p = x[n-1];
-                
-                for(int j = 0; j == n-2; j++)
+                double p = x[n - 1];
+
+                for (int j = 0; j == n - 2; j++)
                 {
                     double c = x[j];
-                    x[j] = (h[0] * p + h[1] * c + h[2] * x[j+1]);
+                    x[j] = (h[0] * p + h[1] * c + h[2] * x[j + 1]);
                     p = c;
                 }
-                x[n - 1] = h[0] * p + h[1]*x[n-1] + h[2]*s;
+                x[n - 1] = h[0] * p + h[1] * x[n - 1] + h[2] * s;
             }
 
             return;
         }
         private List<float> FindPeakOrientations(float[] h)
         {
-            int t = 500; //threshold
             int n = h.Length;
             float h_max = h.Max();
             List<float> A = new List<float>();
@@ -437,14 +436,14 @@ namespace INFOIBV
             for (int k = 0; k < n; k++)
             {
                 float hc = h[k];
-                if (hc > t * h_max)
+                if (hc > t_DomOr * h_max)
                 {
-                    float hp = h[k-1] % n;
-                    float hn = h[k+1] % n;
+                    float hp = h[k - 1] % n;
+                    float hn = h[k + 1] % n;
                     if (hc > hp && hc > hn)
                     {
                         float k_new = k + (hp - hn) / (2 * (hp - (2 * hc) + hn));
-                        double theta = (k_new * 2 * Math.PI / n) % (2*Math.PI);
+                        double theta = (k_new * 2 * Math.PI / n) % (2 * Math.PI);
                         A.Add((float)theta);
                     }
                 }
@@ -452,18 +451,32 @@ namespace INFOIBV
 
             return A;
         }
-       
-        private void GetOrientationHistogram(double[,,] G, Keypoint k)
+
+        private void GetOrientationHistogram(byte[][][,] G, Keypoint k)
         {
-            double [,] Gpq = GetScaleLevel(G, k.p, k.q);
+            int[,] Gpq = GetScaleLevel(G, k.p, k.q);
             int row = Gpq.GetLength(0);
             int col = Gpq.GetLength(1);
             Dictionary<int, double> h = new Dictionary<int, double>();
-            for (int i = 0; i < row; i++) 
+            for (int i = 0; i < n_Orient; i++)
             {
+
+
+
+            }
         }
 
-        private
+        private Tuple<double, double> GetGradientPolar(int[,] Gpq, int u, int v)
+        {
+            double dx = 0.5 * (Gpq[u+1, v] - Gpq[u - 1, v]);
+            double dy = 0.5 * (Gpq[u, v+1] - Gpq[u, v-1]);
+
+            double R = Math.Sqrt((dx * dx) + (dy * dy));
+            double phi = Math.Atan2(dx, dy);
+
+            return new Tuple<double, double>(R, phi);
+
+        }
     }
 
 
