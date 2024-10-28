@@ -35,21 +35,21 @@ namespace INFOIBV
         double rmMax = 0.8;
 
         // GetSiftFeatures takes as input a greyscale image and returns the image
-        public void GetSiftFeatures(byte[,] image)
+        public List<byte[]> GetSiftFeatures(byte[,] image)
         {
             (byte[][][,] G, int[][][,] D) = BuildSiftScaleSpace(image, sigma_s, sigma_0, P, Q);
             List<Keypoint> C = GetKeyPoints(D);
             List<byte[]> S = new List<byte[]>();
             foreach(Keypoint k in C)
             {
-               //List<float> orientations = GetDominantOrientations(G, k);
-               // foreach (float theta in orientations)
-               //{
-                   //byte[] s = MakeSiftDescriptor(G, k, theta);
-                   //S.Add(s);
-               //}
+                List<float> orientations = GetDominantOrientations(G, k);
+                foreach (float theta in orientations)
+                {
+                    //byte[] s = MakeSiftDescriptor(G, k, theta);
+                    //S.Add(s);
+                }
             }
-            //return S;
+            return S;
         }
 
         // BuildSiftScaleSpace
