@@ -218,7 +218,7 @@ namespace INFOIBV
             {
                 for (int v = 0; v < N - 1; v++)
                 {
-                    if (Math.Abs(d[u,v]) < t_Mag)
+                    if (Math.Abs(d[u,v]) > t_Mag)
                     {
                         Keypoint k = new Keypoint(p, q, u, v);
                         int[,,] neighborhood = GetNeighborhood(D, k);
@@ -257,13 +257,17 @@ namespace INFOIBV
         private int[,,] GetNeighborhood(int[][][,] D, Keypoint k)
         {
             int[,,] N = new int[3, 3, 3];
-            for (int u = -1; u > 1; u++)
+            for (int u = -1; u < 1; u++)
             {
-                for (int v = -1; v > 1; v++)
+                for (int v = -1; v < 1; v++)
                 {
-                    for (int w = -1; w > 1; w++)
+                    for (int w = -1; w < 1; w++)
                     {
-                        N[u + 1, v + 1, w + 1] = D[k.p][k.q + w][k.x + u, k.y + v];
+                        if (k.q + w >= 0 && k.q + w < D[k.p].Length && 
+                            k.x + u >= 0 && k.x + u < D[k.p][k.q + w].GetLength(0) &&
+                            k.y + v >= 0 && k.y + v < D[k.p][k.q + w].GetLength(1)) {
+                            N[u + 1, v + 1, w + 1] = D[k.p][k.q + w][k.x + u, k.y + v];
+                        }
                     }
                 }
             }
@@ -278,14 +282,16 @@ namespace INFOIBV
         private bool IsExtremum(int[,,] N)
         {
             int center = N[1, 1, 1];
-            int minimum = 255;
-            int maximum = 0;
+            int minimum = int.MaxValue;
+            int maximum = int.MinValue;
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 3; j++)
                 {
                     for (int k = 0; k < 3; k++)
                     {
+                        if (i == 1 && j == 1 && k == 1)
+                            continue;
                         if (N[i, j, k] < minimum)
                             minimum = N[i, j, k];
                         if (N[i, j, k] > maximum)
@@ -364,8 +370,8 @@ namespace INFOIBV
         // returns the estimated gradient of N
         private Matrix<double> Gradient(int[,,] N)
         {
-            double[,] deltaarray = { { 0.5 * (N[1, 0, 0] - N[-1, 0, 0]), 0.5 * (N[0, 1, 0] - N[0, -1, 0]), 0.5 * (N[0, 0, 1] - N[0, 0, -1]) } };
-            Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray);
+            double[,] deltaarray = { { 0.5 * (N[2, 1, 1] - N[0, 1, 1]), 0.5 * (N[1, 2, 1] - N[1, 0, 1]), 0.5 * (N[1, 1, 2] - N[1, 1, 0]) } };
+            Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray).Transpose();
             return delta;
         }
 
@@ -376,12 +382,12 @@ namespace INFOIBV
         // returns the estimated Hessian matrix of N
         private Matrix<double> Hessian(int[,,] N)
         {
-            double dxx = N[-1, 0, 0] - 2 * N[0, 0, 0] + N[1, 0, 0];
-            double dyy = N[0, -1, 0] - 2 * N[0, 0, 0] + N[0, 1, 0];
-            double dss = N[0, 0, -1] - 2 * N[0, 0, 0] + N[0, 0, 1];
-            double dxy = 0.25 * (N[1, 1, 0] - N[-1, 1, 0] - N[1, -1, 0] + N[-1, -1, 0]);
-            double dxs = 0.25 * (N[1, 0, 1] - N[-1, 0, 1] - N[1, 0, -1] + N[-1, 0, -1]);
-            double dys = 0.25 * (N[0, 1, 1] - N[0, -1, 1] - N[0, 1, -1] + N[0, -1, -1]);
+            double dxx = N[0, 1, 1] - 2 * N[1, 1, 1] + N[2, 1, 1];
+            double dyy = N[1, 0, 1] - 2 * N[1, 1, 1] + N[1, 2, 1];
+            double dss = N[1, 1, 0] - 2 * N[1, 1, 1] + N[1, 1, 2];
+            double dxy = 0.25 * (N[2, 2, 1] - N[0, 2, 1] - N[2, 0, 1] + N[0, 0, 1]);
+            double dxs = 0.25 * (N[2, 1, 2] - N[0, 1, 2] - N[2, 1, 0] + N[0, 1, 0]);
+            double dys = 0.25 * (N[1, 2, 2] - N[1, 0, 2] - N[1, 2, 0] + N[1, 0, 0]);
             double[,] Harray = { { dxx, dxy, dxs }, { dxy, dyy, dys }, { dxs, dys, dss } };
             Matrix<double> H = Matrix<double>.Build.DenseOfArray(Harray);
             return H;
