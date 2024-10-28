@@ -453,15 +453,43 @@ namespace INFOIBV
             return A;
         }
 
-        private void GetOrientationHistogram(double[,,] G, Keypoint k)
+        private double[] GetOrientationHistogram(byte[][][,] G, Keypoint k)
         {
-            double[,] Gpq = GetScaleLevel(G, k.p, k.q);
+            int[,] Gpq = GetScaleLevel(G, k.p, k.q);
             int row = Gpq.GetLength(0);
             int col = Gpq.GetLength(1);
-            Dictionary<int, double> h = new Dictionary<int, double>();
-            for (int i = 0; i < row; i++)
-            {
-            }
+            double[] h = new double[n_Orient - 1];
+            
+            double sigma_w = 1.5 * sigma_0 * Math.Pow(2, k.q / Q);
+            double r_w = Math.Max(1, 2.5 * sigma_w);
+           
+            double umin = Math.Max(Math.Floor(k.x - r_w), 1);
+            double umax = Math.Min(Math.Ceiling(k.x+r_w), row-2);
+            double vmin = Math.Max(Math.Floor(k.y - r_w), 1);
+            double vmax = Math.Min(Math.Ceiling(k.y + r_w), col-2);
+
+            for (int u = (int)umin;  u <= (int)umax; u++)
+                for (int v = (int)vmin; v <= (int)vmax; v++)
+                {
+                    double r_sqrt = Math.Pow((u - k.x), 2) + Math.Pow((v - k.y), 2);
+                    if (r_sqrt < (r_w * r_w))
+                    {
+                        Tuple<double, double> Rphi = GetGradientPolar(Gpq, u, v);
+                        double inside_wg = r_sqrt / (2 * Math.Pow(sigma_w, 2)) * -1; 
+                        double w_g = Math.Exp(inside_wg);
+                        double z = Rphi.Item1 * w_g;
+                        double kphi = n_Orient * Rphi.Item2 / (2*Math.PI);
+                        double alpha = kphi - Math.Floor(kphi);
+                        int k0 = (int)Math.Floor(kphi)%n_Orient;
+                        int k1 = (k0 + 1) % n_Orient;
+                        h[k0] = h[k0] + ((1+ alpha)*z);
+                        h[k1] = h[k1] + (alpha*z);
+                    }    
+                        
+                }
+            return h;
+
+        }
 
         private Tuple<double, double> GetGradientPolar(int[,] Gpq, int u, int v)
         {
