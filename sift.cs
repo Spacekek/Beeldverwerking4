@@ -459,7 +459,7 @@ namespace INFOIBV
 
         private double[] GetOrientationHistogram(byte[][][,] G, Keypoint k)
         {
-            int[,] Gpq = GetScaleLevel(G, k.p, k.q);
+            byte[,] Gpq = GetScaleLevel(G, k.p, k.q);
             int row = Gpq.GetLength(0);
             int col = Gpq.GetLength(1);
             double[] h = new double[n_Orient - 1];
