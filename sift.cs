@@ -448,17 +448,17 @@ namespace INFOIBV
                     
                     if(radius2 < (cutOffRadius * cutOffRadius))
                     {
-                        int uu = (int)(1 / descripterSize * (Math.Cos(-θ) * (u - k.x) - Math.Sin(-θ) * (v - k.y)));
-                        var vv = (int)(1 / descripterSize * (Math.Sin(-θ) * (u - k.x) + Math.Cos(-θ) * (v - k.y)));
+                        int uu = (int)(1.0 / descripterSize * (Math.Cos(-θ) * (u - k.x) - Math.Sin(-θ) * (v - k.y)));
+                        var vv = (int)(1.0 / descripterSize * (Math.Sin(-θ) * (u - k.x) + Math.Cos(-θ) * (v - k.y)));
 
                         (double r, double phi) = GetGradientPolar(Gpq, u, v);
                         
                         double normalizedGradientAngle = (phi - θ) % (2 * Math.PI);
-
+                        if(normalizedGradientAngle < 0) { normalizedGradientAngle += 2 * Math.PI; } //if the angle become negative
                         double wg = Math.Exp(-(radius2 / (2 * (gWeightingFunctionWidth * gWeightingFunctionWidth))));
 
                         float z = (float)(r*wg);
-                        gradientHistogram = UpdateGradientHistogram(gradientHistogram, uu, vv, phi, z);
+                        gradientHistogram = UpdateGradientHistogram(gradientHistogram, uu, vv, normalizedGradientAngle, z);
 
                     }
                 }
@@ -476,7 +476,7 @@ namespace INFOIBV
 
         public byte[] MakeSiftFeatureVector(float[,,] gradientHistogram)
         {
-            float[] f = new float[n_Spat * n_Spat * n_Angl - 1];
+            float[] f = new float[n_Spat * n_Spat * n_Angl];
             int m = 0;
 
             for (int i = 0; i < n_Spat; i++)
@@ -503,11 +503,11 @@ namespace INFOIBV
 
         public byte[] MapToBytes(float[] x, double s )
         {
-            int n = x.GetLength(0);
+            
 
-            byte[] v = new byte[n-1];
+            byte[] v = new byte[x.GetLength(0)];
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < x.GetLength(0); i++)
             {
                 double a = Math.Round(s*x[i]);
                 v[i] = (byte)Math.Min(a, 255.0);
@@ -533,11 +533,15 @@ namespace INFOIBV
 
             float sum = array.Sum();
 
-            for(int i = 0;i < n;i++)
+            if (sum != 0)
             {
-                array[i] = 1/sum*array[i];
-            }
+                for (int i = 0; i < n; i++)
+                {
 
+                    array[i] = array[i] / sum;
+
+                }
+            }
             return array;
         }
 
