@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Deployment.Application;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
 using MathNet.Numerics;
@@ -417,7 +418,7 @@ namespace INFOIBV
         // theta, dominant orientation
 
         // returns a new SIFT descriptor for the key point k'
-        private void MakeSiftDescriptor(byte[][][,] G, Keypoint k,float θ)
+        private SIFTdescriptor MakeSiftDescriptor(byte[][][,] G, Keypoint k,float θ)
         {
             byte[,] Gpq = GetScaleLevel(G, k.p, k.q);
             int m = Gpq.GetLength(0);
@@ -453,14 +454,92 @@ namespace INFOIBV
                         (double r, double phi) = GetGradientPolar(Gpq, u, v);
                         
                         double normalizedGradientAngle = (phi - θ) % (2 * Math.PI);
-                        float z = 0;
+
+                        double wg = Math.Exp(-(radius2 / (2 * (gWeightingFunctionWidth * gWeightingFunctionWidth))));
+
+                        float z = (float)(r*wg);
                         gradientHistogram = UpdateGradientHistogram(gradientHistogram, uu, vv, phi, z);
 
                     }
                 }
             }
+
+            byte[] fSift = MakeSiftFeatureVector(gradientHistogram);
+
+            float sigma = (float)(sigma_0 * Math.Pow(2, k.p + k.q / Q));
+            int xx = (int)(Math.Pow(2, k.p) * k.x);
+            int yy = (int)(Math.Pow(2, k.p) * k.y);
+
+            SIFTdescriptor descriptor = new SIFTdescriptor(xx, yy,sigma, θ,fSift);
+            return descriptor;
         }
 
+        public byte[] MakeSiftFeatureVector(float[,,] gradientHistogram)
+        {
+            float[] f = new float[n_Spat * n_Spat * n_Angl - 1];
+            int m = 0;
+
+            for (int i = 0; i < n_Spat; i++)
+            {
+                for (int j = 0; j < n_Spat; j++)
+                {
+                    for (int k = 0; k < n_Angl; k++)
+                    {
+                        f[m] = gradientHistogram[i, j, k];
+                        m = m + 1;
+                    }
+
+                }
+            }
+
+            f = Normalize(f);
+            f = ClipPeaks(f, (float)t_Fclip);
+            f = Normalize(f);
+
+            byte[] fByte = MapToBytes(f, s_Fscale);
+
+            return fByte;
+        }
+
+        public byte[] MapToBytes(float[] x, double s )
+        {
+            int n = x.GetLength(0);
+
+            byte[] v = new byte[n-1];
+
+            for (int i = 0; i < n; i++)
+            {
+                double a = Math.Round(s*x[i]);
+                v[i] = (byte)Math.Min(a, 255.0);
+            }
+
+            return v;
+        }
+
+        public float[] ClipPeaks(float[] x, float max)
+        {
+            int n = x.GetLength(0);
+
+            for (int i = 0;i < n; i++)
+            {
+                x[i] = Math.Min(x[i], max);
+            }
+
+            return x;
+        }
+        public float[] Normalize(float[] array)
+        {
+            int n = array.GetLength(0);
+
+            float sum = array.Sum();
+
+            for(int i = 0;i < n;i++)
+            {
+                array[i] = 1/sum*array[i];
+            }
+
+            return array;
+        }
 
         public float[,,] UpdateGradientHistogram(float[,,] gradienHistogram, float u, float v,double phi,float z)
         {
@@ -612,6 +691,24 @@ namespace INFOIBV
         }
     }
 
+    class SIFTdescriptor
+    {
+        public int x;
+        public int y;
+        public double sigma;
+        public double orientation;
+        byte[] fsift;
+
+        public SIFTdescriptor(int x, int y, double sigma, double orientation, byte[] fsift)
+        {
+            this.x = x;
+            this.y = y;
+            this.sigma = sigma;
+            this.orientation = orientation;
+            this.fsift = fsift;
+        }
+
+    }
 
     class Keypoint
     {
@@ -619,6 +716,8 @@ namespace INFOIBV
         public int q; //scale level
         public int x; //spatial positon (x,y) (in octave's coördinates) 
         public int y;
+
+
 
         public int P
         {
