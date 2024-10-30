@@ -417,10 +417,104 @@ namespace INFOIBV
         // theta, dominant orientation
 
         // returns a new SIFT descriptor for the key point k'
-        private void MakeSiftDescriptor()
+        private void MakeSiftDescriptor(byte[][][,] G, Keypoint k,float θ)
         {
+            byte[,] Gpq = GetScaleLevel(G, k.p, k.q);
+            int m = Gpq.GetLength(0);
+            int n = Gpq.GetLength(1);
+
+            
+
+            float scaleLevelq = (float)(sigma_0 * Math.Pow(2, (k.q/Q)));
+            double descripterSize = s_Desc * scaleLevelq;
+
+            double gWeightingFunctionWidth = 0.25 * descripterSize;
+            int cutOffRadius = (int)(2.5 * gWeightingFunctionWidth);
+
+            int uMin = Math.Max(k.x - cutOffRadius, 1);
+            int uMax = Math.Min(k.x + cutOffRadius, m - 2);
+
+            int vMin = Math.Max(k.y - cutOffRadius, 1);
+            int vMax = Math.Min(k.y + cutOffRadius, n - 2);
+
+            float[,,] gradientHistogram = new float[n_Spat, n_Spat, n_Angl]; 
+
+            for (int u = uMin ; u <= uMax; u++)
+            {
+                for(int v = vMin ; v <= vMax; v++ )
+                {
+                    int radius2 = (u - k.x)*(u - k.x) + (v - k.y)*(v - k.y);
+                    
+                    if(radius2 < (cutOffRadius * cutOffRadius))
+                    {
+                        int uu = (int)(1 / descripterSize * (Math.Cos(-θ) * (u - k.x) - Math.Sin(-θ) * (v - k.y)));
+                        var vv = (int)(1 / descripterSize * (Math.Sin(-θ) * (u - k.x) + Math.Cos(-θ) * (v - k.y)));
+
+                        (double r, double phi) = GetGradientPolar(Gpq, u, v);
+                        
+                        double normalizedGradientAngle = (phi - θ) % (2 * Math.PI);
+                        float z = 0;
+                        gradientHistogram = UpdateGradientHistogram(gradientHistogram, uu, vv, phi, z);
+
+                    }
+                }
+            }
+        }
+
+
+        public float[,,] UpdateGradientHistogram(float[,,] gradienHistogram, float u, float v,double phi,float z)
+        {
+            double i = n_Spat * u + 0.5 * (n_Spat - 1);
+            double j = n_Spat * v + 0.5 * (n_Spat - 1);
+
+            double k = n_Angl * phi/(2*Math.PI);
+
+            int i0 = (int)i;
+            int i1 = i0+1;
+            int[] iArray = { i0, i1 };
+
+            int j0 = (int)j;
+            int j1 = j0+1;
+            int[] jArray = { j0, j1 };
+
+
+            int k0 = (int)k % n_Angl;
+            int k1 = (k0 + 1) % n_Angl;
+            int[] kArray = { k0, k1 };
+
+            double a0 = i1 - i;
+            double a1 = 1 - a0;
+            double[] aArray = { a0, a1 };
+
+            double b0 = j1 - j;
+            double b1 = 1 - b0;
+            double[] bArray = {b0, b1 };
+
+            double y0 = (int)k + 1 - i;
+            double y1 = 1 - y0;
+            double[] yArray = {y0, y1};
+
+            for(int a = 0 ; a <= 1; a++)
+            {
+                if (0 <= iArray[a] && iArray[a] < n_Spat)
+                {
+                    for(int b = 0 ; b <= 1; b++)
+                    {
+                        if (0 <= jArray[b] && jArray[b]<n_Spat)
+                        {
+                            for (int c = 0 ; c <= 1; c++)
+                            {
+                                gradienHistogram[iArray[a], jArray[b], kArray[c]] += (float)(z * aArray[a] * bArray[b] * yArray[c]);
+                            }
+                        }
+                    }
+                }
+            }
+            return gradienHistogram;
 
         }
+
+        
 
         private void SmoothCircular(double[] x, int iter)
         {
