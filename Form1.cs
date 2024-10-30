@@ -32,7 +32,8 @@ namespace INFOIBV
             DetectEdges,
             HistogramEqualization,
             createSIFTscaleSpace,
-            GetSiftFeatures
+            GetSiftFeatures,
+            DetectObject
         }
 
         /*
@@ -155,6 +156,9 @@ namespace INFOIBV
                     Sift sifter2 = new Sift();
                     sifter2.GetSiftFeatures(workingImage);
                     return workingImage;
+                case ProcessingFunctions.DetectObject:
+                    var existingFeatures = new List<byte[]>(); // load in existing features
+                    return DetectObject(workingImage, existingFeatures);
                 default:
                     return null;
             }
@@ -243,12 +247,50 @@ namespace INFOIBV
             filterSize = oneven_waardes[trackBar3.Value];
             label3.Text = "Filter size is: " + oneven_waardes[trackBar3.Value];
         }
+        // assumes grayscale input
+        private byte[,] DetectObject(byte[,] inputImage, List<byte[]> existingFeatures)
+        {
+            // preprocessing for now only histogram equalization
+            byte[,] equalized = ImageOperations.histogramEqualization(inputImage);
 
-        ////
-        /// ASSIGMNENT 4
-        ///
+            Sift sifter = new Sift();
+            var features = sifter.GetSiftFeatures(equalized);
 
-        //
+            List<byte[]> matches = new List<byte[]>();
+
+            // match features with existing features
+            foreach (var feature in features)
+            {
+                if (existingFeatures.Contains(feature))
+                {
+                    matches.Add(feature);
+                }
+            }
+
+            // 50% of features needed
+            double percentageNeeded = 0.5;
+
+            if (matches.Count / existingFeatures.Count < percentageNeeded)
+            {
+                return inputImage; // don't draw anything
+            }
+
+            // draw rectangle around detected object
+            Point min = new Point(); // minimum x and y coordinates of features
+            Point max = new Point(); // maximum x and y coordinates of features
+            int xmin = int.MaxValue;
+            int xmax = int.MinValue;
+            int ymin = int.MaxValue;
+            int ymax = int.MinValue;
+
+            foreach (var feature in matches)
+            {
+                // find min and max
+            }
+            byte[,] imageWithRectangle = ImageOperations.drawRectangle(inputImage, min, max);
+
+            return imageWithRectangle;
+        }
        
     }
 }

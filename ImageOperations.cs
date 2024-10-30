@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Threading.Tasks;
 
 namespace INFOIBV
@@ -296,6 +297,28 @@ namespace INFOIBV
             });
 
             return tempImage;
+        }
+
+        // Draw rectangle on image
+        public static byte[,] drawRectangle(byte[,] inputImage, Point a, Point b)
+        {
+            int xstart = a.X;
+            int ystart = a.Y;
+            int xend = b.X;
+            int yend = b.Y;
+
+            for (int i = xstart; i < xend; i++)
+            {
+                inputImage[i, ystart] = 255;
+                inputImage[i, yend] = 255;
+            }
+            for (int i = ystart; i < yend; i++)
+            {
+                inputImage[xstart, i] = 255;
+                inputImage[xend, i] = 255;
+            }
+
+            return inputImage;
         }
     }
 }
