@@ -36,18 +36,18 @@ namespace INFOIBV
         double rmMax = 0.8;
 
         // GetSiftFeatures takes as input a greyscale image and returns the image
-        public List<byte[]> GetSiftFeatures(byte[,] image)
+        public List<SIFTdescriptor> GetSiftFeatures(byte[,] image)
         {
             (byte[][][,] G, int[][][,] D) = BuildSiftScaleSpace(image, sigma_s, sigma_0, P, Q);
             List<Keypoint> C = GetKeyPoints(D);
-            List<byte[]> S = new List<byte[]>();
+            List<SIFTdescriptor> S = new List<SIFTdescriptor>();
             foreach(Keypoint k in C)
             {
                 List<float> orientations = GetDominantOrientations(G, k);
                 foreach (float theta in orientations)
                 {
-                    //byte[] s = MakeSiftDescriptor(G, k, theta);
-                    //S.Add(s);
+                    SIFTdescriptor s = MakeSiftDescriptor(G, k, theta);
+                    S.Add(s);
                 }
             }
             return S;
@@ -143,7 +143,7 @@ namespace INFOIBV
                 {
                     for (int y = 0; y < firstGaussian.GetLength(1); y++)
                     {
-                        diffrenceGaussian[x, y] = secondGaussian[x, y] - firstGaussian[x, y];
+                        diffrenceGaussian[x, y] = Math.Abs(secondGaussian[x, y] - firstGaussian[x, y]);
 
                     }
 
@@ -691,11 +691,10 @@ namespace INFOIBV
             double phi = Math.Atan2(dx, dy);
 
             return new Tuple<double, double>(R, phi);
-
         }
     }
 
-    class SIFTdescriptor
+    public class SIFTdescriptor
     {
         public int x;
         public int y;
@@ -711,7 +710,6 @@ namespace INFOIBV
             this.orientation = orientation;
             this.fsift = fsift;
         }
-
     }
 
     class Keypoint
@@ -720,32 +718,6 @@ namespace INFOIBV
         public int q; //scale level
         public int x; //spatial positon (x,y) (in octave's coördinates) 
         public int y;
-
-
-
-        public int P
-        {
-            get { return p; }
-            set { p = value; }
-        }
-
-        public int Q 
-        {
-            get { return q; }
-            set { q = value; }
-        }
-
-        public int X
-        {
-            get { return x; }
-            set { x = value; }
-        }
-
-        public int Y
-        {
-            get { return y; }
-            set { y = value; }
-        }
 
         public Keypoint(int p, int q, int x, int y)
         {

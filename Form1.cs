@@ -157,7 +157,7 @@ namespace INFOIBV
                     sifter2.GetSiftFeatures(workingImage);
                     return workingImage;
                 case ProcessingFunctions.DetectObject:
-                    var existingFeatures = new List<byte[]>(); // load in existing features
+                    var existingFeatures = new List<SIFTdescriptor>(); // load in existing features
                     return DetectObject(workingImage, existingFeatures);
                 default:
                     return null;
@@ -248,7 +248,7 @@ namespace INFOIBV
             label3.Text = "Filter size is: " + oneven_waardes[trackBar3.Value];
         }
         // assumes grayscale input
-        private byte[,] DetectObject(byte[,] inputImage, List<byte[]> existingFeatures)
+        private byte[,] DetectObject(byte[,] inputImage, List<SIFTdescriptor> existingFeatures)
         {
             // preprocessing for now only histogram equalization
             byte[,] equalized = ImageOperations.histogramEqualization(inputImage);
@@ -256,24 +256,20 @@ namespace INFOIBV
             Sift sifter = new Sift();
             var features = sifter.GetSiftFeatures(equalized);
 
-            List<byte[]> matches = new List<byte[]>();
+            List<SIFTdescriptor> matches = new List<SIFTdescriptor>();
 
             // match features with existing features
             foreach (var feature in features)
             {
                 if (existingFeatures.Contains(feature))
-                {
                     matches.Add(feature);
-                }
             }
 
             // 50% of features needed
             double percentageNeeded = 0.5;
 
             if (matches.Count / existingFeatures.Count < percentageNeeded)
-            {
                 return inputImage; // don't draw anything
-            }
 
             // draw rectangle around detected object
             Point min = new Point(); // minimum x and y coordinates of features
@@ -286,6 +282,14 @@ namespace INFOIBV
             foreach (var feature in matches)
             {
                 // find min and max
+                if (feature.x < xmin)
+                    xmin = feature.x;
+                if (feature.y < ymin)
+                    ymin = feature.y;
+                if (feature.y > ymax)
+                    ymax = feature.y;
+                if (feature.x > xmax)
+                    xmax = feature.x;
             }
             byte[,] imageWithRectangle = ImageOperations.drawRectangle(inputImage, min, max);
 
