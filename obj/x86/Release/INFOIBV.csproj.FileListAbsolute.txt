@@ -21,3 +21,6 @@ C:\Users\Monk\Documents\GitHub\Beeldverwerking4\obj\x86\Release\INFOIBV.csproj.C
 C:\Users\Monk\Documents\GitHub\Beeldverwerking4\obj\x86\Release\INFOIBV.csproj.Up2Date
 C:\Users\Monk\Documents\GitHub\Beeldverwerking4\obj\x86\Release\INFOIBV.exe
 C:\Users\Monk\Documents\GitHub\Beeldverwerking4\obj\x86\Release\INFOIBV.pdb
+C:\Users\kek\Desktop\Beeldverwerking4\bin\Release\MathNet.Numerics.dll
+C:\Users\kek\Desktop\Beeldverwerking4\bin\Release\MathNet.Numerics.xml
+C:\Users\kek\Desktop\Beeldverwerking4\obj\x86\Release\INFOIBV.csproj.Up2Date

@@ -17,7 +17,7 @@ namespace INFOIBV
         int P = 4;
         double sigma_s = 0.5;
         double sigma_0 = 1.6;
-        double t_Extrm = 0.0;
+        double t_Extrm = 2.0;
         // Keypoint detection
         int n_Orient = 36;
         int n_Refine = 5;
@@ -625,6 +625,8 @@ namespace INFOIBV
             this.orientation = orientation;
             this.fsift = fsift;
         }
+        public SIFTdescriptor()
+        { }
     }
 
     class Keypoint

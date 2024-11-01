@@ -11,6 +11,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 
 
@@ -35,7 +37,8 @@ namespace INFOIBV
             HistogramEqualization,
             createSIFTscaleSpace,
             GetSiftFeatures,
-            DetectObject
+            DetectObject,
+            TestRectangle
         }
 
         /*
@@ -159,8 +162,12 @@ namespace INFOIBV
                     sifter2.GetSiftFeatures(workingImage);
                     return workingImage;
                 case ProcessingFunctions.DetectObject:
-                    var existingFeatures = new List<SIFTdescriptor>(); // load in existing features
+                    var existingFeatures = ReadFeatures("features.xml");
                     return DetectObject(workingImage, existingFeatures);
+                case ProcessingFunctions.TestRectangle:
+                    Point a = new Point(10, 10);
+                    Point b = new Point(300, 300);
+                    return ImageOperations.drawRectangle(workingImage, a, b);
                 default:
                     return null;
             }
@@ -258,17 +265,16 @@ namespace INFOIBV
             Sift sifter = new Sift();
             var features = sifter.GetSiftFeatures(equalized);
 
-            List<SIFTdescriptor> matches = MatchFeatures(existingFeatures, features, 20);
+            List<SIFTdescriptor> matches = MatchFeatures(existingFeatures, features, 100);
 
             // 50% of features needed
-            double percentageNeeded = 0.5;
+            double percentageNeeded = 0.001;
+            double percentageFound = (double)matches.Count / (double)existingFeatures.Count;
 
-            if (matches.Count / existingFeatures.Count < percentageNeeded)
+            if (percentageFound < percentageNeeded)
                 return inputImage; // don't draw anything
 
             // draw rectangle around detected object
-            Point min = new Point(); // minimum x and y coordinates of features
-            Point max = new Point(); // maximum x and y coordinates of features
             int xmin = int.MaxValue;
             int xmax = int.MinValue;
             int ymin = int.MaxValue;
@@ -286,6 +292,10 @@ namespace INFOIBV
                 if (feature.x > xmax)
                     xmax = feature.x;
             }
+
+            Point min = new Point(xmin, ymin); // minimum x and y coordinates of features
+            Point max = new Point(xmax, ymax); // maximum x and y coordinates of features
+
             byte[,] imageWithRectangle = ImageOperations.drawRectangle(inputImage, min, max);
 
             return imageWithRectangle;
@@ -302,7 +312,7 @@ namespace INFOIBV
                 byte[,] equalized = ImageOperations.histogramEqualization(image);
                 Sift sifter = new Sift();
                 var features = sifter.GetSiftFeatures(image);
-                matches = MatchFeatures(matches, features, 20);
+                matches = MatchFeatures(matches, features, 400);
             }
             return matches;
         }
@@ -338,13 +348,17 @@ namespace INFOIBV
             }
         }
 
+
         private List<SIFTdescriptor> MatchFeatures(List<SIFTdescriptor> existingFeatures, List<SIFTdescriptor> newFeatures, double maxDist)
         {
-            List<SIFTdescriptor> matches = new List<SIFTdescriptor>();
-            foreach (var feature in existingFeatures)
+            var matches = new ConcurrentBag<SIFTdescriptor>();
+            var times = new ConcurrentBag<double>();
+
+            Parallel.ForEach(existingFeatures, feature =>
             {
                 SIFTdescriptor match = null;
                 double dist = double.MaxValue;
+
                 foreach (var feature2 in newFeatures)
                 {
                     double d = FeatureDistance(feature, feature2);
@@ -354,11 +368,16 @@ namespace INFOIBV
                         match = feature2;
                     }
                 }
+
                 if (match != null && dist < maxDist)
+                {
                     matches.Add(match);
-            }
-            return matches;
+                }
+            });
+
+            return matches.ToList();
         }
+
 
         private double FeatureDistance(SIFTdescriptor A, SIFTdescriptor B)
         {
@@ -397,6 +416,9 @@ namespace INFOIBV
                     }
                 }       
             }
+
+            List<SIFTdescriptor> features = CreateExistingFeatures(inputImages);
+            SaveFeatures("features.xml", features);
         }
     }
 }
