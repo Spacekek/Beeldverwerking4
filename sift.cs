@@ -625,7 +625,7 @@ namespace INFOIBV
             double h_max = h.Max();
             List<float> A = new List<float>();
 
-            for (int k = 0; k < n; k++)
+            for (int k = 1; k < n-1; k++)
             {
                 double hc = h[k];
                 if (hc > t_DomOr * h_max)
@@ -649,7 +649,7 @@ namespace INFOIBV
             byte[,] Gpq = GetScaleLevel(G, k.p, k.q);
             int row = Gpq.GetLength(0);
             int col = Gpq.GetLength(1);
-            double[] h = new double[n_Orient - 1];
+            double[] h = new double[n_Orient];
             
             double sigma_w = 1.5 * sigma_0 * Math.Pow(2, k.q / Q);
             double r_w = Math.Max(1, 2.5 * sigma_w);
@@ -670,6 +670,8 @@ namespace INFOIBV
                         double w_g = Math.Exp(inside_wg);
                         double z = Rphi.Item1 * w_g;
                         double kphi = n_Orient * Rphi.Item2 / (2*Math.PI);
+                        if (kphi < 0)
+                            kphi += 360;
                         double alpha = kphi - Math.Floor(kphi);
                         int k0 = (int)Math.Floor(kphi)%n_Orient;
                         int k1 = (k0 + 1) % n_Orient;
