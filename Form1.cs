@@ -9,6 +9,8 @@ using System.Windows.Forms;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Serialization;
 
 
 
@@ -256,14 +258,7 @@ namespace INFOIBV
             Sift sifter = new Sift();
             var features = sifter.GetSiftFeatures(equalized);
 
-            List<SIFTdescriptor> matches = new List<SIFTdescriptor>();
-
-            // match features with existing features
-            foreach (var feature in features)
-            {
-                if (existingFeatures.Contains(feature))
-                    matches.Add(feature);
-            }
+            List<SIFTdescriptor> matches = MatchFeatures(existingFeatures, features, 20);
 
             // 50% of features needed
             double percentageNeeded = 0.5;
@@ -294,6 +289,85 @@ namespace INFOIBV
             byte[,] imageWithRectangle = ImageOperations.drawRectangle(inputImage, min, max);
 
             return imageWithRectangle;
+        }
+
+        private List<SIFTdescriptor> CreateExistingFeatures(List<byte[,]> images)
+        {
+            Sift sift = new Sift();
+            byte[,] firstimage = ImageOperations.histogramEqualization(images[0]);
+            List<SIFTdescriptor> matches = sift.GetSiftFeatures(firstimage);
+            for (int i = 1; i < images.Count; i++)
+            {
+                byte[,] image = images[i];
+                byte[,] equalized = ImageOperations.histogramEqualization(image);
+                Sift sifter = new Sift();
+                var features = sifter.GetSiftFeatures(image);
+                matches = MatchFeatures(matches, features, 20);
+            }
+            return matches;
+        }
+
+        private void SaveFeatures(String filePath, List<SIFTdescriptor> features)
+        {
+            TextWriter writer = null;
+            try
+            {
+                var serializer = new XmlSerializer(typeof(List<SIFTdescriptor>));
+                writer = new StreamWriter(filePath, false);
+                serializer.Serialize(writer, features);
+            }
+            finally
+            {
+                if (writer != null)
+                    writer.Close();
+            }
+        }
+        private List<SIFTdescriptor> ReadFeatures(string filePath)
+        {
+            TextReader reader = null;
+            try
+            {
+                var serializer = new XmlSerializer(typeof(List<SIFTdescriptor>));
+                reader = new StreamReader(filePath);
+                return (List<SIFTdescriptor>)serializer.Deserialize(reader);
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+        }
+
+        private List<SIFTdescriptor> MatchFeatures(List<SIFTdescriptor> existingFeatures, List<SIFTdescriptor> newFeatures, double maxDist)
+        {
+            List<SIFTdescriptor> matches = new List<SIFTdescriptor>();
+            foreach (var feature in existingFeatures)
+            {
+                SIFTdescriptor match = null;
+                double dist = double.MaxValue;
+                foreach (var feature2 in newFeatures)
+                {
+                    double d = FeatureDistance(feature, feature2);
+                    if (d < dist)
+                    {
+                        dist = d;
+                        match = feature2;
+                    }
+                }
+                if (match != null && dist < maxDist)
+                    matches.Add(match);
+            }
+            return matches;
+        }
+
+        private double FeatureDistance(SIFTdescriptor A, SIFTdescriptor B)
+        {
+            double dist = 0;
+            for (int i = 0; i < A.fsift.Length; i++)
+            {
+                dist += Math.Pow(A.fsift[i] - B.fsift[i], 2);
+            }
+            return Math.Sqrt(dist);
         }
 
         private void button1_Click(object sender, EventArgs e)
