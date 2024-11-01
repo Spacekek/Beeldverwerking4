@@ -615,7 +615,7 @@ namespace INFOIBV
         public int y;
         public double sigma;
         public double orientation;
-        byte[] fsift;
+        public byte[] fsift;
 
         public SIFTdescriptor(int x, int y, double sigma, double orientation, byte[] fsift)
         {
