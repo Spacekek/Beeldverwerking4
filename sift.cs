@@ -53,17 +53,7 @@ namespace INFOIBV
             return S;
         }
 
-        // BuildSiftScaleSpace
-        // Input:
-        // I, image
-        // sigmaS, sampling scale
-        // sigma0, reference scale of the first octave
-        // P, number of octaves
-        // Q, number of scale steps per octave
-
         // returns a sift scale space representation (G, D) of the image
-        // G: a Hierarchical gaussian scale space
-        // D: a hierarchical DoG scale space
         public (byte[][][,], int[][][,]) BuildSiftScaleSpace(byte[,] InputImage, double sigmaS, double sigma0, float P, float Q)
         {
             double initial_sigma = sigma0 * Math.Pow(2, (-1.0 / Q));
@@ -179,10 +169,6 @@ namespace INFOIBV
             return adjImage;
         }
 
-        // GetKeyPoints
-        // input:
-        // D: DoG scale space with P octaves containing Q levels
-
         // returns a set of keypoints located in D
         private List<Keypoint> GetKeyPoints(int[][][,] D)
         {
@@ -202,12 +188,6 @@ namespace INFOIBV
             }
             return C;
         }
-
-        // FindExtrema
-        // input:
-        // D: DoG scale space
-        // p: octave
-        // q: step
 
         // returns list of extrema
         private List<Keypoint> FindExtrema(int[][][,] D, int p, int q)
@@ -234,12 +214,6 @@ namespace INFOIBV
             return E;
         }
 
-        // GetScaleLevel(D, p, q)
-        // input:
-        // D: DoG scale space
-        // p: octave
-        // q: step
-
         // returns the specified scale level
         private int[,] GetScaleLevel(int[][][,] D, int p, int q)
         {
@@ -249,11 +223,6 @@ namespace INFOIBV
         {
             return G[p][q];
         }
-
-        // GetNeighborhood
-        // input:
-        // D: DoG scale space
-        // k: keypoint
 
         // returns 3x3x3 neighborhood values around position k in D
         private int[,,] GetNeighborhood(int[][][,] D, Keypoint k)
@@ -275,10 +244,6 @@ namespace INFOIBV
             }
             return N;
         }
-
-        // IsExtremum(N)
-        // input:
-        // N, neighborhood
 
         // returns whether N is local minimum or maximum by the threshold tExtrm >=0
         private bool IsExtremum(int[,,] N)
@@ -307,11 +272,6 @@ namespace INFOIBV
                 return true;
             return false;
         }
-
-        // RefineKeyPosition(D, k)
-        // input:
-        // D, DoG scale space
-        // k, candidate position
 
         // returns a refined key point k'or null if no key point could be localized at or near k
         private Keypoint RefineKeyPosition(int[][][,] D, Keypoint k)
@@ -347,16 +307,10 @@ namespace INFOIBV
                 int u = (int)Math.Min(1, Math.Max(-1, Math.Round(d[0, 0])));
                 int v = (int)Math.Min(1, Math.Max(-1, Math.Round(d[1, 0])));
                 k = k + new Keypoint(0, 0, u, v);
-                n = n + 1;
+                n++;
             }
             return null;
         }
-
-        // IsInside(D, k)
-        // input:
-        // D, DoG scale space
-        // k, keypoint
-
         // returns whether k is inside D
         private bool IsInside(int[][][,] D, Keypoint k)
         {
@@ -365,10 +319,6 @@ namespace INFOIBV
             return (0 < u && u < M - 1) && (0 < v && v < N - 1) && (0 <= q && q < Q);
         }
 
-        // Gradient(N)
-        // input:
-        // N, neighborhood
-
         // returns the estimated gradient of N
         private Matrix<double> Gradient(int[,,] N)
         {
@@ -376,10 +326,6 @@ namespace INFOIBV
             Matrix<double> delta = Matrix<double>.Build.DenseOfArray(deltaarray).Transpose();
             return delta;
         }
-
-        // Hessian(N)
-        // input:
-        // N, neighborhood
 
         // returns the estimated Hessian matrix of N
         private Matrix<double> Hessian(int[,,] N)
@@ -395,6 +341,7 @@ namespace INFOIBV
             return H;
         }
 
+        // returns a list of dominant orientations for the key point k'
         private List<float> GetDominantOrientations(byte[][][,] G, Keypoint k)
         {
             double[] h = GetOrientationHistogram(G, k);
@@ -402,20 +349,6 @@ namespace INFOIBV
             List<float> A = FindPeakOrientations(h);
             return A;
         }
-        
-        // returns a list of dominant orientations for the key point k'
-        //private void GetDominantOrientations(List<int> G, Keypoint k)
-        //{
-        //    histogram h = GetOrientationHistogram(G, k);
-        //    SmoothCircular(h, n);
-        //    List<int> A = FindPeakOrientations(h); //list of dominant orientations 
-        //}
-
-        // MakeSiftDescriptor
-        // input:
-        // G, hierarchical gaussian scale space
-        // k', refined key point
-        // theta, dominant orientation
 
         // returns a new SIFT descriptor for the key point k'
         private SIFTdescriptor MakeSiftDescriptor(byte[][][,] G, Keypoint k,float θ)
@@ -486,7 +419,7 @@ namespace INFOIBV
                     for (int k = 0; k < n_Angl; k++)
                     {
                         f[m] = gradientHistogram[i, j, k];
-                        m = m + 1;
+                        m++;
                     }
 
                 }
