@@ -70,11 +70,8 @@ namespace INFOIBV
             byte[][,] firstOctave = new byte[(int)Q][,];
             firstOctave = MakeGaussianOctave(gausianFilteredImage, Q, sigma0); //maakt eerste octave van Q lang die gaussianfilter toepast op image met verschillende a 
 
-
             byte[][][,] octaves = new byte[(int)P][][,];
             octaves[0] = firstOctave;
-
-
 
             for (int p = 1; p < P; p++)
             {
@@ -108,12 +105,8 @@ namespace INFOIBV
                     gausianFilter = ImageOperations.createGaussianFilter(filtersize, sd);
                     octave[(int)i] = ImageOperations.convolveImage(gaussianFilteredImage, gausianFilter);
                 }
-
-
-
             }
             return octave;
-
         }
 
         private byte[,] Decimate(byte[,] Image)
