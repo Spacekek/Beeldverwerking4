@@ -295,6 +295,34 @@ namespace INFOIBV
 
             return imageWithRectangle;
         }
-       
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            List<byte[,]> inputImages = new List<byte[,]>();
+            openImageDialog.Multiselect = true;
+
+            if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
+            {
+                foreach (string file in openImageDialog.FileNames)           // get the file names
+                {
+                    InputImage = new Bitmap(file);                              // create new Bitmap from file
+                    if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
+                    InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
+                        MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
+                    else
+                    {
+                        Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+                        // copy input Bitmap to array            
+                        for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
+                            for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+                                Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+                        byte[,] trainimage = convertToGrayscale(Image);
+                        inputImages.Add(trainimage);
+                    }
+                }       
+            }
+        }
     }
 }
