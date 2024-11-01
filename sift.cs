@@ -116,37 +116,6 @@ namespace INFOIBV
 
         }
 
-        private int[][,] MakeDogOctave(byte[][,] octave)
-        {
-            byte[,] firstGaussian;
-            byte[,] secondGaussian;
-
-            int[][,] DOGoctave = new int[octave.GetLength(0) - 1][,];
-
-            for (int i = 0; i < octave.Length - 1; i++)
-            {
-                firstGaussian = octave[i];
-                secondGaussian = octave[i + 1];
-                int[,] diffrenceGaussian = new int[firstGaussian.GetLength(0), firstGaussian.GetLength(1)];
-
-                for (int x = 0; x < firstGaussian.GetLength(0); x++)
-                {
-                    for (int y = 0; y < firstGaussian.GetLength(1); y++)
-                    {
-                        diffrenceGaussian[x, y] = Math.Abs(secondGaussian[x, y] - firstGaussian[x, y]);
-
-                    }
-
-                }
-
-                DOGoctave[i] = diffrenceGaussian;
-
-            }
-
-            return DOGoctave;
-
-        }
-
         private byte[,] Decimate(byte[,] Image)
         {
             int breedte = Image.GetLength(0);
@@ -169,6 +138,33 @@ namespace INFOIBV
             return adjImage;
         }
 
+        private int[][,] MakeDogOctave(byte[][,] octave)
+        {
+            byte[,] firstGaussian;
+            byte[,] secondGaussian;
+
+            int[][,] DOGoctave = new int[octave.GetLength(0) - 1][,];
+
+            for (int i = 0; i < octave.Length - 1; i++)
+            {
+                firstGaussian = octave[i];
+                secondGaussian = octave[i + 1];
+                int[,] diffrenceGaussian = new int[firstGaussian.GetLength(0), firstGaussian.GetLength(1)];
+
+                for (int x = 0; x < firstGaussian.GetLength(0); x++)
+                {
+                    for (int y = 0; y < firstGaussian.GetLength(1); y++)
+                    {
+                        diffrenceGaussian[x, y] = Math.Abs(secondGaussian[x, y] - firstGaussian[x, y]);
+                    }
+                }
+
+                DOGoctave[i] = diffrenceGaussian;
+            }
+
+            return DOGoctave;
+        }        
+
         // returns a set of keypoints located in D
         private List<Keypoint> GetKeyPoints(int[][][,] D)
         {
@@ -179,11 +175,13 @@ namespace INFOIBV
                {
                  List<Keypoint> E = FindExtrema(D, p, q);
                  foreach(Keypoint k in E)
-                    {
-                        Keypoint k1 = RefineKeyPosition(D,k);
-                        if (k1 != null)
-                            { C.Add(k1); }
+                 {
+                    Keypoint k1 = RefineKeyPosition(D,k);
+                    if (k1 != null)
+                    { 
+                        C.Add(k1); 
                     }
+                 }
                }
             }
             return C;
@@ -350,6 +348,100 @@ namespace INFOIBV
             return A;
         }
 
+        private double[] GetOrientationHistogram(byte[][][,] G, Keypoint k)
+        {
+            byte[,] Gpq = GetScaleLevel(G, k.p, k.q);
+            int row = Gpq.GetLength(0);
+            int col = Gpq.GetLength(1);
+            double[] h = new double[n_Orient];
+
+            double sigma_w = 1.5 * sigma_0 * Math.Pow(2, k.q / Q);
+            double r_w = Math.Max(1, 2.5 * sigma_w);
+
+            double umin = Math.Max(Math.Floor(k.x - r_w), 1);
+            double umax = Math.Min(Math.Ceiling(k.x + r_w), row - 2);
+            double vmin = Math.Max(Math.Floor(k.y - r_w), 1);
+            double vmax = Math.Min(Math.Ceiling(k.y + r_w), col - 2);
+
+            for (int u = (int)umin; u <= (int)umax; u++)
+                for (int v = (int)vmin; v <= (int)vmax; v++)
+                {
+                    double r_sqrt = Math.Pow((u - k.x), 2) + Math.Pow((v - k.y), 2);
+                    if (r_sqrt < (r_w * r_w))
+                    {
+                        Tuple<double, double> Rphi = GetGradientPolar(Gpq, u, v);
+                        double inside_wg = r_sqrt / (2 * Math.Pow(sigma_w, 2)) * -1;
+                        double w_g = Math.Exp(inside_wg);
+                        double z = Rphi.Item1 * w_g;
+                        double kphi = n_Orient * Rphi.Item2 / (2 * Math.PI);
+                        if (kphi < 0)
+                            kphi += 360;
+                        double alpha = kphi - Math.Floor(kphi);
+                        int k0 = (int)Math.Floor(kphi) % n_Orient;
+                        int k1 = (k0 + 1) % n_Orient;
+                        h[k0] = h[k0] + ((1 + alpha) * z);
+                        h[k1] = h[k1] + (alpha * z);
+                    }
+                }
+            return h;
+        }
+
+        private Tuple<double, double> GetGradientPolar(byte[,] Gpq, int u, int v)
+        {
+            double dx = 0.5 * (Gpq[u + 1, v] - Gpq[u - 1, v]);
+            double dy = 0.5 * (Gpq[u, v + 1] - Gpq[u, v - 1]);
+
+            double R = Math.Sqrt((dx * dx) + (dy * dy));
+            double phi = Math.Atan2(dx, dy);
+
+            return new Tuple<double, double>(R, phi);
+        }
+
+        private void SmoothCircular(double[] x, int iter)
+        {
+            double[] h = { 0.25, 0.5, 0.25 };
+            int n = x.Length;
+            for (int i = 1; i == iter; i++)
+            {
+                double s = x[0];
+                double p = x[n - 1];
+
+                for (int j = 0; j == n - 2; j++)
+                {
+                    double c = x[j];
+                    x[j] = (h[0] * p + h[1] * c + h[2] * x[j + 1]);
+                    p = c;
+                }
+                x[n - 1] = h[0] * p + h[1] * x[n - 1] + h[2] * s;
+            }
+            return;
+        }
+
+        private List<float> FindPeakOrientations(double[] h)
+        {
+            int n = h.Length;
+            double h_max = h.Max();
+            List<float> A = new List<float>();
+
+            for (int k = 1; k < n - 1; k++)
+            {
+                double hc = h[k];
+                if (hc > t_DomOr * h_max)
+                {
+                    double hp = h[k - 1] % n;
+                    double hn = h[k + 1] % n;
+                    if (hc > hp && hc > hn)
+                    {
+                        double k_new = k + (hp - hn) / (2 * (hp - (2 * hc) + hn));
+                        double theta = (k_new * 2 * Math.PI / n) % (2 * Math.PI);
+                        A.Add((float)theta);
+                    }
+                }
+            }
+
+            return A;
+        }
+
         // returns a new SIFT descriptor for the key point k'
         private SIFTdescriptor MakeSiftDescriptor(byte[][][,] G, Keypoint k,float θ)
         {
@@ -421,7 +513,6 @@ namespace INFOIBV
                         f[m] = gradientHistogram[i, j, k];
                         m++;
                     }
-
                 }
             }
 
@@ -436,8 +527,6 @@ namespace INFOIBV
 
         public byte[] MapToBytes(float[] x, double s )
         {
-            
-
             byte[] v = new byte[x.GetLength(0)];
 
             for (int i = 0; i < x.GetLength(0); i++)
@@ -463,16 +552,13 @@ namespace INFOIBV
         public float[] Normalize(float[] array)
         {
             int n = array.GetLength(0);
-
             float sum = array.Sum();
 
             if (sum != 0)
             {
                 for (int i = 0; i < n; i++)
                 {
-
                     array[i] = array[i] / sum;
-
                 }
             }
             return array;
@@ -527,105 +613,6 @@ namespace INFOIBV
                 }
             }
             return gradienHistogram;
-
-        }
-
-        
-
-        private void SmoothCircular(double[] x, int iter)
-        {
-            double[] h = { 0.25, 0.5, 0.25 };
-            int n = x.Length;
-            for (int i = 1; i == iter; i++)
-            {
-                double s = x[0];
-                double p = x[n - 1];
-
-                for (int j = 0; j == n - 2; j++)
-                {
-                    double c = x[j];
-                    x[j] = (h[0] * p + h[1] * c + h[2] * x[j + 1]);
-                    p = c;
-                }
-                x[n - 1] = h[0] * p + h[1] * x[n - 1] + h[2] * s;
-            }
-
-            return;
-        }
-        private List<float> FindPeakOrientations(double[] h)
-        {
-            int n = h.Length;
-            double h_max = h.Max();
-            List<float> A = new List<float>();
-
-            for (int k = 1; k < n-1; k++)
-            {
-                double hc = h[k];
-                if (hc > t_DomOr * h_max)
-                {
-                    double hp = h[k - 1] % n;
-                    double hn = h[k + 1] % n;
-                    if (hc > hp && hc > hn)
-                    {
-                        double k_new = k + (hp - hn) / (2 * (hp - (2 * hc) + hn));
-                        double theta = (k_new * 2 * Math.PI / n) % (2 * Math.PI);
-                        A.Add((float)theta);
-                    }
-                }
-            }
-
-            return A;
-        }
-
-        private double[] GetOrientationHistogram(byte[][][,] G, Keypoint k)
-        {
-            byte[,] Gpq = GetScaleLevel(G, k.p, k.q);
-            int row = Gpq.GetLength(0);
-            int col = Gpq.GetLength(1);
-            double[] h = new double[n_Orient];
-            
-            double sigma_w = 1.5 * sigma_0 * Math.Pow(2, k.q / Q);
-            double r_w = Math.Max(1, 2.5 * sigma_w);
-           
-            double umin = Math.Max(Math.Floor(k.x - r_w), 1);
-            double umax = Math.Min(Math.Ceiling(k.x+r_w), row-2);
-            double vmin = Math.Max(Math.Floor(k.y - r_w), 1);
-            double vmax = Math.Min(Math.Ceiling(k.y + r_w), col-2);
-
-            for (int u = (int)umin;  u <= (int)umax; u++)
-                for (int v = (int)vmin; v <= (int)vmax; v++)
-                {
-                    double r_sqrt = Math.Pow((u - k.x), 2) + Math.Pow((v - k.y), 2);
-                    if (r_sqrt < (r_w * r_w))
-                    {
-                        Tuple<double, double> Rphi = GetGradientPolar(Gpq, u, v);
-                        double inside_wg = r_sqrt / (2 * Math.Pow(sigma_w, 2)) * -1; 
-                        double w_g = Math.Exp(inside_wg);
-                        double z = Rphi.Item1 * w_g;
-                        double kphi = n_Orient * Rphi.Item2 / (2*Math.PI);
-                        if (kphi < 0)
-                            kphi += 360;
-                        double alpha = kphi - Math.Floor(kphi);
-                        int k0 = (int)Math.Floor(kphi)%n_Orient;
-                        int k1 = (k0 + 1) % n_Orient;
-                        h[k0] = h[k0] + ((1+ alpha)*z);
-                        h[k1] = h[k1] + (alpha*z);
-                    }    
-                        
-                }
-            return h;
-
-        }
-
-        private Tuple<double, double> GetGradientPolar(byte[,] Gpq, int u, int v)
-        {
-            double dx = 0.5 * (Gpq[u+1, v] - Gpq[u - 1, v]);
-            double dy = 0.5 * (Gpq[u, v+1] - Gpq[u, v-1]);
-
-            double R = Math.Sqrt((dx * dx) + (dy * dy));
-            double phi = Math.Atan2(dx, dy);
-
-            return new Tuple<double, double>(R, phi);
         }
     }
 
