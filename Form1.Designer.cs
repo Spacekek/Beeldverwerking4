@@ -245,7 +245,7 @@
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(132, 22);
             this.textBox1.TabIndex = 28;
-            this.textBox1.Text = "200";
+            this.textBox1.Text = "215";
             // 
             // textBox2
             // 
