@@ -59,9 +59,9 @@ namespace INFOIBV
             double initial_sigma = sigma0 * Math.Pow(2, (-1.0 / Q));
             float initial_increment_sigma = (float)Math.Sqrt((initial_sigma * initial_sigma) - (sigmaS * sigmaS));
 
-            //filter size moet vgm mee groeien. miss kijken of int kunnen maken 
+            
             byte filtersize = (byte)(6 * initial_increment_sigma + 1);
-            if (filtersize % 2 == 0) { filtersize += 1; } //zorgt dat filtersize altijd oneven is
+            if (filtersize % 2 == 0) { filtersize += 1; }
 
             float[,] gausianFilter = ImageOperations.createGaussianFilter(filtersize, initial_increment_sigma);  //maakt the gaussian filter
 
@@ -88,6 +88,7 @@ namespace INFOIBV
             return (octaves, DOGoctaves);
         }
 
+        // returns Gaussian octave 
         private byte[][,] MakeGaussianOctave(byte[,] gaussianFilteredImage, float Q, double sigma0)
         {
             byte[][,] octave = new byte[(int)Q][,];
@@ -97,8 +98,8 @@ namespace INFOIBV
             {
                 float sd = (float)(sigma0 * Math.Sqrt(Math.Pow(2.0, (2.0 * i / Q)) - 1));
 
-                byte filtersize = (byte)(6 * sd + 1); //past filter size aan opbasis van sd
-                if (filtersize % 2 == 0) { filtersize += 1; } //zorgt dat filtersize altijd oneven is
+                byte filtersize = (byte)(6 * sd + 1); 
+                if (filtersize % 2 == 0) { filtersize += 1; } 
                 if (sd == 0) { octave[(int)i] = gaussianFilteredImage; }
                 else
                 {
@@ -109,6 +110,7 @@ namespace INFOIBV
             return octave;
         }
 
+        //returns a image 
         private byte[,] Decimate(byte[,] Image)
         {
             int breedte = Image.GetLength(0);
@@ -130,7 +132,7 @@ namespace INFOIBV
 
             return adjImage;
         }
-
+        // returns dog space of an octave
         private int[][,] MakeDogOctave(byte[][,] octave)
         {
             byte[,] firstGaussian;
