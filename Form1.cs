@@ -23,52 +23,11 @@ namespace INFOIBV
         private Bitmap InputImage;
         private Bitmap OutputImage;
 
-        /*
-         * this enum defines the processing functions that will be shown in the dropdown (a.k.a. combobox)
-         * you can expand it by adding new entries to applyProcessingFunction()
-         */
-        private enum ProcessingFunctions
-        {
-            loadGreyImage,
-            AdjustContrast,
-            ConvolutionFilter,
-            MedianFilter,
-            DetectEdges,
-            HistogramEqualization,
-            createSIFTscaleSpace,
-            GetSiftFeatures,
-            DetectObject,
-            TestRectangle
-        }
-
-        /*
-         * these are the parameters for your processing functions, you should add more as you see fit
-         * it is useful to set them based on controls such as sliders, which you can add to the form
-         */
-        private byte filterSize = 11;
-        private float filterSigma = 1f;
-        private byte threshold = 127;
-
+        // main parameters for object detection
 
         public INFOIBV()
         {
             InitializeComponent();
-            populateCombobox();
-            populate_sliders_labels(); //populates sliders with min/max values and current value + populate lable with value
-
-        }
-        
-        /*
-         * populateCombobox: populates the combobox with items as defined by the ProcessingFunctions enum
-         */
-        private void populateCombobox()
-        {
-            foreach (string itemName in Enum.GetNames(typeof(ProcessingFunctions)))
-            {
-                string ItemNameSpaces = Regex.Replace(Regex.Replace(itemName, @"(\P{Ll})(\P{Ll}\p{Ll})", "$1 $2"), @"(\p{Ll})(\P{Ll})", "$1 $2");
-                comboBox.Items.Add(ItemNameSpaces);
-            }
-            comboBox.SelectedIndex = 0;
         }
 
         /*
@@ -108,7 +67,8 @@ namespace INFOIBV
 
             // execute image processing steps
             byte[,] workingImage = convertToGrayscale(Image);               // convert image to grayscale
-            workingImage = applyProcessingFunction(workingImage);           // processing functions
+            var existingFeatures = ReadFeatures("features.xml");
+            workingImage = DetectObject(workingImage, existingFeatures);           // processing functions
 
             // copy array to output Bitmap
             for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
@@ -117,60 +77,7 @@ namespace INFOIBV
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
-           
-            
-
             pictureBox2.Image = (Image)OutputImage;                         // display output image
-        }
-
-        /*
-         * applyProcessingFunction: defines behavior of function calls when "Apply" is pressed
-         */
-        private byte[,] applyProcessingFunction(byte[,] workingImage)
-        {
-            sbyte[,] horizontalKernel = {
-                                                    {-1,0,1 },
-                                                    {-2,0,2},
-                                                    {-1,0,1},
-                                                 };                      // Define this kernel yourself
-            sbyte[,] verticalKernel = {
-                                                    { -1, -2, -1 },
-                                                    { 0, 0, 0},
-                                                    { 1, 2, 1}
-                                              };                         // Define this kernel yourself
-            switch ((ProcessingFunctions)comboBox.SelectedIndex)
-            {
-                case ProcessingFunctions.AdjustContrast:
-                    return ImageOperations.adjustContrast(workingImage);
-                case ProcessingFunctions.ConvolutionFilter:
-                    float[,] filter = ImageOperations.createGaussianFilter(filterSize, filterSigma);
-                    return ImageOperations.convolveImage(workingImage, filter);
-                case ProcessingFunctions.MedianFilter:
-                    return ImageOperations.medianFilter(workingImage, filterSize);
-                case ProcessingFunctions.DetectEdges:
-                    return ImageOperations.edgeMagnitude(workingImage, horizontalKernel, verticalKernel);
-                case ProcessingFunctions.loadGreyImage:
-                    return workingImage;
-                case ProcessingFunctions.HistogramEqualization:
-                    return ImageOperations.histogramEqualization(workingImage);
-                case ProcessingFunctions.createSIFTscaleSpace:
-                    Sift sifter = new Sift();
-                    (byte[][][,] G, int[][][,] D) = sifter.BuildSiftScaleSpace(workingImage, (float)0.5, (float)1.6, 4, 3);
-                    return workingImage;
-                case ProcessingFunctions.GetSiftFeatures:
-                    Sift sifter2 = new Sift();
-                    sifter2.GetSiftFeatures(workingImage);
-                    return workingImage;
-                case ProcessingFunctions.DetectObject:
-                    var existingFeatures = ReadFeatures("features.xml");
-                    return DetectObject(workingImage, existingFeatures);
-                case ProcessingFunctions.TestRectangle:
-                    Point a = new Point(10, 10);
-                    Point b = new Point(300, 300);
-                    return ImageOperations.drawRectangle(workingImage, a, b);
-                default:
-                    return null;
-            }
         }
 
 
@@ -219,57 +126,47 @@ namespace INFOIBV
             return tempImage;
         }
 
-        public void populate_sliders_labels() // populates the sliders with values
-        {
-            label1.Text = "Threshold is: " + threshold.ToString();
-            label2.Text = "Filter sigma is:" + filterSigma.ToString();
-            label3.Text = "Filter size is: " + filterSize.ToString();
-            label4.Text = "structure size is: " + structure.Value.ToString();
-
-        }
-        public byte[] oneven_waardes = { 1, 3, 5, 7, 9, 11,13 };
-        public void trackBar1_Scroll(object sender, EventArgs e) //trackbar threshold
-        {
-            trackBar1 = sender as TrackBar;
- 
-            threshold = (byte)trackBar1.Value;
-            label1.Text = "Threshold is: " + threshold.ToString();
-        }
-
-        public void label1_Click(object sender, EventArgs e)
-        {
-            label1 = sender as Label;
-            label1.Text = threshold.ToString();
-        }
-
-        private void trackBar2_Scroll(object sender, EventArgs e) //trackbar filter sigma
-        {
-            trackBar2 = sender as TrackBar;
-            filterSigma = trackBar2.Value;
-            label2.Text = "Filter sigma is: " + filterSigma.ToString();
-
-        }
-
-        private void trackBar3_Scroll(object sender, EventArgs e) // trackbar filter size
-        {
-            trackBar3 = sender as TrackBar;
-            filterSize = oneven_waardes[trackBar3.Value];
-            label3.Text = "Filter size is: " + oneven_waardes[trackBar3.Value];
-        }
-        // assumes grayscale input
+        /*
+         * DetectObject: Detects object described in the existingFeatures and draws a rectangle around it
+         * input:   inputImage          single-channel (Color) image
+         *          existingFeatures    List of SIFTdescriptors describing an object
+         * output:                      single-channel (byte) image
+         */
         private byte[,] DetectObject(byte[,] inputImage, List<SIFTdescriptor> existingFeatures)
         {
             // preprocessing for now only histogram equalization
-            byte[,] equalized = ImageOperations.histogramEqualization(inputImage);
+            byte[,] image = PreProcessImage(inputImage);
 
             Sift sifter = new Sift();
-            var features = sifter.GetSiftFeatures(equalized);
+            var features = sifter.GetSiftFeatures(image);
 
-            List<SIFTdescriptor> matches = MatchFeatures(existingFeatures, features, 100);
+            double detectDistance = 200;
+            try
+            {
+                detectDistance = Convert.ToDouble(textBox1.Text);
+            }
+            catch
+            {
+                textBox1.Text = Math.Round(detectDistance).ToString();
+            }
 
-            // 50% of features needed
-            double percentageNeeded = 0.001;
+            List<SIFTdescriptor> matches = MatchFeatures(existingFeatures, features, detectDistance);
+
             double percentageFound = (double)matches.Count / (double)existingFeatures.Count;
+            label6.Text = matches.Count.ToString();
+            label7.Text = existingFeatures.Count.ToString();
+            label5.Text = Math.Round(percentageFound * 100, 2).ToString();
+
+            double percentageNeeded = 0.5;
+            try
+            {
+                percentageNeeded = Convert.ToDouble(textBox3.Text) / 100;
+            }
+            catch 
+            { 
+                textBox3.Text = Math.Round(percentageNeeded*100, 2).ToString();
+            }
+            
 
             if (percentageFound < percentageNeeded)
                 return inputImage; // don't draw anything
@@ -304,19 +201,37 @@ namespace INFOIBV
         private List<SIFTdescriptor> CreateExistingFeatures(List<byte[,]> images)
         {
             Sift sift = new Sift();
-            byte[,] firstimage = ImageOperations.histogramEqualization(images[0]);
+            byte[,] firstimage = PreProcessImage(images[0]);
             List<SIFTdescriptor> matches = sift.GetSiftFeatures(firstimage);
             for (int i = 1; i < images.Count; i++)
             {
-                byte[,] image = images[i];
-                byte[,] equalized = ImageOperations.histogramEqualization(image);
+                byte[,] image = PreProcessImage(images[i]);
                 Sift sifter = new Sift();
                 var features = sifter.GetSiftFeatures(image);
-                matches = MatchFeatures(matches, features, 400);
+                double existingDistance = 200;
+                try
+                {
+                    existingDistance = Convert.ToDouble(textBox2.Text);
+                }
+                catch
+                {
+                    textBox2.Text = Math.Round(existingDistance).ToString();
+                }
+                matches = MatchFeatures(matches, features, existingDistance);
             }
             return matches;
         }
 
+        // applies several preprocessing effects on the image to make the object detection more accurate
+        private byte[,] PreProcessImage(byte[,] inputImage)
+        {
+            byte[,] outImage = ImageOperations.adjustContrast(inputImage); // adjust contrast so we use full contrast space
+            outImage = ImageOperations.histogramEqualization(outImage); //for more detail to work with use histogram equalization
+            outImage = ImageOperations.medianFilter(outImage, 3); // reduce noise with median filter
+            return outImage;
+        }
+
+        // saves a list of features to a file
         private void SaveFeatures(String filePath, List<SIFTdescriptor> features)
         {
             TextWriter writer = null;
@@ -332,6 +247,7 @@ namespace INFOIBV
                     writer.Close();
             }
         }
+        // reads a list of features from a file
         private List<SIFTdescriptor> ReadFeatures(string filePath)
         {
             TextReader reader = null;
@@ -348,7 +264,7 @@ namespace INFOIBV
             }
         }
 
-
+        // matches descriptors between 2 lists of descriptors when features are within a certain distance.
         private List<SIFTdescriptor> MatchFeatures(List<SIFTdescriptor> existingFeatures, List<SIFTdescriptor> newFeatures, double maxDist)
         {
             var matches = new ConcurrentBag<SIFTdescriptor>();
@@ -378,7 +294,7 @@ namespace INFOIBV
             return matches.ToList();
         }
 
-
+        // calculates the distance between 2 SIFTdescriptors (simple euclidian distance between feature vectors)
         private double FeatureDistance(SIFTdescriptor A, SIFTdescriptor B)
         {
             double dist = 0;
@@ -388,7 +304,8 @@ namespace INFOIBV
             }
             return Math.Sqrt(dist);
         }
-
+        
+        // button for creating and saving existing features
         private void button1_Click(object sender, EventArgs e)
         {
             List<byte[,]> inputImages = new List<byte[,]>();
